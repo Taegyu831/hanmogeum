@@ -1,0 +1,122 @@
+[
+ {
+  "drinkId": "W1",
+  "chips": [
+   "복숭아 같아요",
+   "달아요"
+  ],
+  "text": "복숭아 아이스티인데 술이라 신기했어요",
+  "reaction": "딱 내 취향",
+  "sample": true
+ },
+ {
+  "drinkId": "W1",
+  "chips": [
+   "달아요",
+   "톡 쏘아요"
+  ],
+  "text": "디저트 와인 느낌이라 식후에 좋을 듯해요",
+  "reaction": "딱 내 취향",
+  "sample": true
+ },
+ {
+  "drinkId": "W2",
+  "chips": [
+   "생각보다 시어요",
+   "향긋해요"
+  ],
+  "text": "풀 향이 나는데 개운해서 고기랑 어울릴 것 같아요",
+  "reaction": "괜찮았어요",
+  "sample": true
+ },
+ {
+  "drinkId": "W6",
+  "chips": [
+   "묵직해요",
+   "쌉쌀해요"
+  ],
+  "text": "진해서 한 잔이면 충분했어요",
+  "reaction": "내 취향 아님",
+  "sample": true
+ },
+ {
+  "drinkId": "K1",
+  "chips": [
+   "고소해요",
+   "달아요"
+  ],
+  "text": "누룽지 맛이 나요. 달아서 자꾸 마시게 돼요",
+  "reaction": "딱 내 취향",
+  "sample": true
+ },
+ {
+  "drinkId": "K2",
+  "chips": [
+   "고소해요",
+   "톡 쏘아요"
+  ],
+  "text": "요거트 같은 상큼함이 의외였어요",
+  "reaction": "괜찮았어요",
+  "sample": true
+ },
+ {
+  "drinkId": "K3",
+  "chips": [
+   "달아요",
+   "복숭아 같아요"
+  ],
+  "text": "매실청 같아서 부담이 없었어요",
+  "reaction": "딱 내 취향",
+  "sample": true
+ },
+ {
+  "drinkId": "K4",
+  "chips": [
+   "알코올 향이 세요",
+   "고소해요"
+  ],
+  "text": "향은 좋은데 도수가 세서 조금씩만 마셨어요",
+  "reaction": "괜찮았어요",
+  "sample": true
+ },
+ {
+  "drinkId": "H1",
+  "chips": [
+   "고소해요",
+   "알코올 향이 약해요"
+  ],
+  "text": "생각보다 부드럽고 달콤한 향이 났어요",
+  "reaction": "딱 내 취향",
+  "sample": true
+ },
+ {
+  "drinkId": "H2",
+  "chips": [
+   "연기 향이 나요",
+   "쌉쌀해요"
+  ],
+  "text": "병원 냄새 같다는 말이 무슨 뜻인지 알겠어요",
+  "reaction": "내 취향 아님",
+  "sample": true
+ },
+ {
+  "drinkId": "H4",
+  "chips": [
+   "톡 쏘아요",
+   "끝맛이 깔끔해요"
+  ],
+  "text": "맥주처럼 편하게 마시기 좋아요",
+  "reaction": "딱 내 취향",
+  "sample": true
+ },
+ {
+  "drinkId": "H7",
+  "chips": [
+   "향긋해요",
+   "달아요"
+  ],
+  "text": "배 같은 단맛이 은은해서 깔끔했어요",
+  "reaction": "딱 내 취향",
+  "sample": true
+ }
+]

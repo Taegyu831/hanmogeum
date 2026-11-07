@@ -1,0 +1,50 @@
+[
+ {
+  "label": "복숭아 같아요",
+  "axis": "fruit +"
+ },
+ {
+  "label": "달아요",
+  "axis": "sweet +"
+ },
+ {
+  "label": "톡 쏘아요",
+  "axis": "fizz +"
+ },
+ {
+  "label": "생각보다 시어요",
+  "axis": "sour +"
+ },
+ {
+  "label": "쌉쌀해요",
+  "axis": "bitter +"
+ },
+ {
+  "label": "묵직해요",
+  "axis": "body +"
+ },
+ {
+  "label": "연기 향이 나요",
+  "axis": "smoke +"
+ },
+ {
+  "label": "고소해요",
+  "axis": "grain +"
+ },
+ {
+  "label": "향긋해요",
+  "axis": "flower +, herb +"
+ },
+ {
+  "label": "알코올 향이 약해요",
+  "axis": "alc -"
+ },
+ {
+  "label": "알코올 향이 세요",
+  "axis": "alc +"
+ },
+ {
+  "label": "끝맛이 깔끔해요",
+  "axis": "(집계만)"
+ }
+]
