@@ -1,6 +1,8 @@
 import { state, save, reset } from "./store.js";
 import { Q1, Q2, Q3, AXES, AXIS_LABEL, prefsFromAnswers, rank, nudge, tasteType, typeBlurb, typeBars, explain } from "./reco.js";
 import { bottle, drinkColor, shortName } from "./art.js";
+import { createNav, swallowClick, EASE } from "./nav.js";
+import { buzz, pop, burst } from "./fx.js";
 
 const app = document.getElementById("app");
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -35,22 +37,64 @@ const I = {
 };
 
 /* ---------- router ---------- */
-let prevPath = null;
-let curPath = null;
-
-function parse() {
-  const h = location.hash.replace(/^#/, "") || "/";
+function parse(hash = location.hash) {
+  const h = hash.replace(/^#/, "") || "/";
   const [path, qs] = h.split("?");
   return { path, parts: path.split("/").filter(Boolean), q: new URLSearchParams(qs || "") };
 }
-export function go(hash, { replace = false } = {}) {
-  if (replace) history.replaceState(null, "", hash); else history.pushState(null, "", hash);
-  render();
+const TAB_ROOTS = ["feed", "nearby", "log"];
+const isTabRoot = (path) => {
+  const p = path.split("/").filter(Boolean);
+  return p.length === 1 && TAB_ROOTS.includes(p[0]);
+};
+// Where a back drag lands when there is no history (opened from a shared link).
+function parentOf(hash) {
+  const { parts, q } = parse(hash);
+  switch (parts[0]) {
+    case "card": return "#/feed";
+    case "bar": return q.get("drink") ? `#/nearby/${q.get("drink")}` : "#/nearby";
+    case "review": return `#/card/${parts[1]}`;
+    case "nearby": return parts[1] ? `#/card/${parts[1]}` : null;
+    case "q": return Number(parts[1]) > 1 ? `#/q/${Number(parts[1]) - 1}` : "#/";
+    case "result": return "#/q/3";
+    default: return null;
+  }
 }
-function back(fallback = "#/feed") {
-  if (prevPath) history.back(); else go(fallback, { replace: true });
+
+let feedKeep = null;
+function dropFeed() {
+  feedKeep?.el.remove();
+  feedKeep = null;
 }
-window.addEventListener("popstate", render);
+
+// Back drag starts anywhere except on things with their own sideways gesture,
+// or anywhere within the left edge strip.
+function backFilter(e) {
+  if (e.clientX - app.getBoundingClientRect().left < 28) return true;
+  return !e.target.closest("[data-noswipe], input, textarea");
+}
+
+function build(hash) {
+  const r = parse(hash);
+  const key = r.parts[0] || "";
+  if (key === "feed" && feedKeep?.el.isConnected) { feedKeep.show(); return feedKeep.el; }
+  const fn = ROUTES[key] || welcome;
+  const view = fn(r);
+  if (!view) return null;
+  const tpl = document.createElement("template");
+  tpl.innerHTML = view.html.trim();
+  const el = tpl.content.firstElementChild;
+  app.append(el);
+  view.mount?.(el);
+  if (key === "feed") feedKeep = { el, show: () => view.show?.(el) };
+  if (key && !isTabRoot(r.path)) nav.drag(el, { dir: "back", target: () => nav.prevHash(), filter: backFilter });
+  return el;
+}
+
+const nav = createNav({ root: app, build, parentOf, isTabRoot, keep: (el) => el === feedKeep?.el });
+const go = (hash, opts) => nav.go(hash, opts);
+const back = (fallback) => nav.back(fallback);
+const render = () => nav.refresh();
 
 function ensureRecs() {
   if (!state.prefs) {
@@ -63,18 +107,6 @@ function ensureRecs() {
 const ROUTES = {
   "": welcome, q: question, result, feed, card, nearby, bar, review, log,
 };
-
-function render() {
-  const r = parse();
-  prevPath = curPath;
-  curPath = r.path;
-  const fn = ROUTES[r.parts[0] || ""] || welcome;
-  const view = fn(r);
-  if (!view) return;
-  app.innerHTML = view.html;
-  app.scrollTop = 0;
-  view.mount?.(app);
-}
 
 /* ---------- helpers ---------- */
 let toastTimer;
@@ -230,6 +262,7 @@ function result() {
   state.feedIndex = 0;
   state.passed = [];
   save();
+  dropFeed();
   const type = typeName();
   const words = type.split(" ");
   const title = words.length > 2 ? `${words.slice(0, -1).join(" ")}<br>${words.at(-1)}` : type;
@@ -256,7 +289,7 @@ function reelHTML(d, i, total) {
   const label = i < 5 ? `오늘의 탐색 ${i + 1}/5` : `더 둘러보기 ${i + 1}/${total}`;
   const showHint = !state.hintSeen && i === 0;
   return `<article class="reel" data-id="${d.id}" data-i="${i}" style="background:${drinkColor(d)}">
-    <div class="reel-head"><span class="pill glass">${label}</span><a class="pill glass" href="#/log">${esc(typeName())}</a></div>
+    <div class="reel-head"><span class="pill glass">${label}</span><a class="pill glass" href="#/log" data-type>${esc(typeName())}</a></div>
     <div class="reel-visual"><span class="halo"></span>${bottle(d)}</div>
     <button class="peek-edge" data-open aria-label="맛 카드 보기">${I.back}</button>
     ${showHint ? `<span class="hint-swipe" aria-hidden="true">왼쪽으로 밀어보세요</span>` : ""}
@@ -284,12 +317,22 @@ function endHTML() {
   </article>`;
 }
 
+let peeked = false;
 function feed() {
   ensureRecs();
   const ids = state.order;
   const slides = () => ids.map((id, i) => reelHTML(drinkById[id], i, ids.length) + (i === 4 ? endHTML() : "")).join("");
   return {
     html: `<section class="screen"><div class="feed" id="feed">${slides()}</div>${tabbar("feed")}</section>`,
+    // Runs when the kept feed comes back on stage.
+    show(el) {
+      el.querySelectorAll(".reel[data-id]").forEach((r) => {
+        const b = r.querySelector("[data-like]");
+        b.setAttribute("aria-pressed", state.liked.includes(r.dataset.id));
+      });
+      el.querySelectorAll("[data-type]").forEach((a) => (a.textContent = typeName()));
+      if (state.hintSeen) el.querySelectorAll(".hint-swipe").forEach((h) => h.remove());
+    },
     mount(el) {
       const f = el.querySelector("#feed");
       const slideTop = (i) => f.querySelector(`.reel[data-i="${i}"]`)?.offsetTop ?? 0;
@@ -329,13 +372,17 @@ function feed() {
           r.dataset.bound = 1;
           const id = r.dataset.id;
           const i = Number(r.dataset.i);
-          const open = () => { state.hintSeen = true; state.feedIndex = i; save(); go(`#/card/${id}`); };
-          r.querySelectorAll("[data-open]").forEach((b) => (b.onclick = open));
+          const seen = () => { state.hintSeen = true; state.feedIndex = i; save(); r.querySelector(".hint-swipe")?.remove(); };
+          r.querySelectorAll("[data-open]").forEach((b) => (b.onclick = () => { seen(); go(`#/card/${id}`); }));
+          nav.drag(r, { dir: "forward", target: () => `#/card/${id}`, onCommit: () => { seen(); buzz(6); } });
+
           r.querySelector("[data-like]").onclick = (e) => {
             const b = e.currentTarget;
+            const circle = b.querySelector(".circle");
             if (state.liked.includes(id)) {
               state.liked = state.liked.filter((x) => x !== id);
               b.setAttribute("aria-pressed", false);
+              pop(circle, 0.85);
               save();
               return;
             }
@@ -343,53 +390,50 @@ function feed() {
             state.passed = state.passed.filter((x) => x !== id);
             state.prefs = nudge(state.prefs, drinkById[id], true);
             b.setAttribute("aria-pressed", true);
+            pop(circle);
+            burst(circle, app);
+            buzz(12);
             toast("끌린 맛을 다음 추천에 반영할게요");
             rerankAfter(i);
           };
-          r.querySelector("[data-pass]").onclick = () => {
+
+          r.querySelector("[data-pass]").onclick = (e) => {
+            buzz(8);
+            e.currentTarget.querySelector(".circle").animate(
+              [{ transform: "rotate(0)" }, { transform: "rotate(90deg) scale(.9)" }, { transform: "rotate(90deg)" }],
+              { duration: 220, easing: EASE });
+            const art = r.querySelector(".reel-visual svg");
+            // Scroll only after the fly-away ends; a running animation can stop Chrome's smooth scroll.
+            art.animate(
+              [{ transform: "none", opacity: 1 }, { transform: "translate(-80px, 30px) rotate(-18deg) scale(.85)", opacity: 0 }],
+              { duration: 280, easing: "cubic-bezier(.5,0,.75,0)" });
             if (!state.passed.includes(id)) state.passed.push(id);
             state.liked = state.liked.filter((x) => x !== id);
             state.prefs = nudge(state.prefs, drinkById[id], false);
             toast("비슷한 맛은 뒤로 미룰게요");
             rerankAfter(i);
-            const next = r.nextElementSibling;
-            if (next) f.scrollTo({ top: next.offsetTop, behavior: "smooth" });
+            const moveOn = () => {
+              art.style.opacity = 0;
+              const next = r.nextElementSibling;
+              if (next) f.scrollTo({ top: next.offsetTop, behavior: "smooth" });
+              setTimeout(() => (art.style.opacity = ""), 900);
+            };
+            setTimeout(moveOn, 290);
           };
-          swipe(r, { onLeft: open });
         });
       }
       bind(f);
+
+      // First visit: briefly show that the taste card sits on the right.
+      if (!state.hintSeen && !peeked) {
+        peeked = true;
+        setTimeout(() => {
+          const cur = state.order[state.feedIndex];
+          if (nav.current()?.el === el && !state.hintSeen && cur) nav.peek(`#/card/${cur}`);
+        }, 1200);
+      }
     },
   };
-}
-
-// Horizontal swipe on an element that otherwise scrolls vertically.
-function swipe(el, { onLeft, onRight }) {
-  let x0, y0, dx = 0, horiz = null;
-  el.addEventListener("pointerdown", (e) => {
-    if (e.button !== 0) return;
-    x0 = e.clientX; y0 = e.clientY; dx = 0; horiz = null;
-  });
-  el.addEventListener("pointermove", (e) => {
-    if (x0 == null) return;
-    dx = e.clientX - x0;
-    const dy = e.clientY - y0;
-    if (horiz === null && Math.hypot(dx, dy) > 10) horiz = Math.abs(dx) > Math.abs(dy) * 1.3;
-    if (horiz) {
-      const lim = onLeft && dx < 0 ? dx : onRight && dx > 0 ? dx : 0;
-      el.style.transform = `translateX(${lim * 0.45}px)`;
-    }
-  });
-  const end = () => {
-    if (x0 == null) return;
-    el.style.transform = "";
-    if (horiz && dx < -60 && onLeft) onLeft();
-    else if (horiz && dx > 60 && onRight) onRight();
-    x0 = null;
-  };
-  el.addEventListener("pointerup", end);
-  el.addEventListener("pointercancel", end);
-  el.addEventListener("pointerleave", end);
 }
 
 let depth = 1;
@@ -430,15 +474,16 @@ function card({ parts }) {
     : `<p class="empty">아직 직접 맛본 후기가 없어요.<br>근처에서 맛보고 첫 후기를 남겨주세요.</p>`;
 
   const ctaClass = mode === "home" ? "btn-secondary" : "btn-primary";
+  const fromFeed = location.hash.startsWith("#/feed") || (nav.prevHash() || "").startsWith("#/feed");
   return {
-    html: `<section class="screen card-screen ${prevPath === "/feed" ? "slide-in" : ""}" style="background:${drinkColor(d)}">
+    html: `<section class="screen card-screen" style="background:${drinkColor(d)}">
       <div class="card-top">
-        <button class="icon-btn" data-back aria-label="뒤로">${I.back}</button><span>${prevPath === "/feed" || !prevPath ? "피드로 돌아가기" : "돌아가기"}</span>
+        <button class="icon-btn" data-back aria-label="뒤로">${I.back}</button><span>${fromFeed ? "피드로 돌아가기" : "돌아가기"}</span>
         <span class="spacer"></span>
         <button class="icon-btn" data-like aria-pressed="${liked}" aria-label="끌려요" style="color:${liked ? "var(--ruby)" : "inherit"}">${liked ? I.heart.replace('fill="none"', 'fill="currentColor"') : I.heart}</button>
       </div>
       <div class="scroll">
-        <div class="flip" id="flip">
+        <div class="flip" id="flip" data-noswipe>
           <div class="flip-inner">
             <div class="face front" role="button" tabindex="0" aria-label="카드 뒤집기">
               <span class="tag" style="background:${drinkColor(d)}">${esc(shortName(d))} · ${esc(country)} ${esc(d.category)} ${esc(abvShort(d))}</span>
@@ -474,7 +519,47 @@ function card({ parts }) {
     </section>`,
     mount(el) {
       const flip = el.querySelector("#flip");
-      const toggle = () => flip.classList.toggle("flipped");
+      const inner = flip.querySelector(".flip-inner");
+      // The angle keeps growing (0, 180, 360...) so every flip turns the same way as the finger.
+      let angle = 0;
+      const setAngle = (a, smooth = true) => {
+        inner.style.transition = smooth ? "" : "none";
+        inner.style.transform = `rotateY(${a}deg)`;
+      };
+      const settleFlip = () => {
+        flip.classList.toggle("flipped", Math.round(angle / 180) % 2 !== 0);
+        setAngle(angle);
+      };
+      const toggle = () => { angle += 180; settleFlip(); buzz(6); };
+      let fd = null;
+      flip.addEventListener("pointerdown", (e) => {
+        if (e.target.closest("[data-noflip], a") || (e.pointerType === "mouse" && e.button !== 0)) return;
+        fd = { id: e.pointerId, x: e.clientX, y: e.clientY, on: false };
+      });
+      flip.addEventListener("pointermove", (e) => {
+        if (!fd || e.pointerId !== fd.id) return;
+        const dx = e.clientX - fd.x;
+        const dy = e.clientY - fd.y;
+        if (!fd.on) {
+          if (Math.hypot(dx, dy) < 10) return;
+          if (Math.abs(dx) < Math.abs(dy) * 1.2) { fd = null; return; }
+          fd.on = true;
+          try { flip.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+        }
+        setAngle(angle + Math.max(-180, Math.min(180, dx * 0.6)), false);
+      });
+      const flipEnd = (e) => {
+        if (!fd || e.pointerId !== fd.id) return;
+        const { on, x } = fd;
+        fd = null;
+        if (!on) return;
+        swallowClick(flip);
+        const turned = (e.clientX - x) * 0.6;
+        if (e.type !== "pointercancel" && Math.abs(turned) > 50) { angle += turned < 0 ? -180 : 180; buzz(6); }
+        settleFlip();
+      };
+      flip.addEventListener("pointerup", flipEnd);
+      flip.addEventListener("pointercancel", flipEnd);
       el.querySelectorAll(".face").forEach((f) => {
         f.addEventListener("click", (e) => { if (!e.target.closest("[data-noflip], a")) toggle(); });
         f.addEventListener("keydown", (e) => { if ((e.key === "Enter" || e.key === " ") && e.target === f) { e.preventDefault(); toggle(); } });
@@ -485,13 +570,24 @@ function card({ parts }) {
         el.querySelector("#deep").innerHTML = deep();
       });
       el.querySelector("[data-back]").onclick = () => back();
-      el.querySelector("[data-like]").onclick = () => {
-        if (state.liked.includes(d.id)) state.liked = state.liked.filter((x) => x !== d.id);
-        else { state.liked.push(d.id); state.prefs = nudge(state.prefs, d, true); toast("끌린 맛을 다음 추천에 반영할게요"); }
+      const likeBtn = el.querySelector("[data-like]");
+      likeBtn.onclick = () => {
+        const on = !state.liked.includes(d.id);
+        if (on) {
+          state.liked.push(d.id);
+          state.prefs = nudge(state.prefs, d, true);
+          toast("끌린 맛을 다음 추천에 반영할게요");
+          burst(likeBtn, app);
+          buzz(12);
+        } else {
+          state.liked = state.liked.filter((x) => x !== d.id);
+        }
         save();
-        render();
+        likeBtn.setAttribute("aria-pressed", on);
+        likeBtn.style.color = on ? "var(--ruby)" : "inherit";
+        likeBtn.innerHTML = on ? I.heart.replace('fill="none"', 'fill="currentColor"') : I.heart;
+        pop(likeBtn, on ? 1.3 : 0.85);
       };
-      swipe(el.querySelector(".card-top").parentElement, { onRight: () => back() });
     },
   };
 }
@@ -499,6 +595,7 @@ function card({ parts }) {
 /* ---------- C. nearby, bar, review ---------- */
 const PIN_POS = { B1: [62, 64], B2: [28, 47], B3: [80, 34], B4: [47, 26] };
 const filters = { small: true, open: false, fresh: false };
+let sheetSnap = "mid";
 
 function nearby({ parts }) {
   const d = parts[1] ? drinkById[parts[1]] : null;
@@ -508,20 +605,20 @@ function nearby({ parts }) {
     return { b, pours };
   }).filter((x) => x.pours.length).sort((a, b) => minutes(a.b.distance) - minutes(b.b.distance));
 
-  const map = `<svg class="streets" viewBox="0 0 390 330" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
-    <rect width="390" height="330" fill="#F4E6CC"/>
-    <path d="M250 0 C220 80 300 150 240 220 S200 300 230 330 L300 330 C270 300 280 250 310 210 S300 80 320 0z" fill="#B9DDEB"/>
-    <rect x="0" y="190" width="90" height="100" rx="14" fill="#C5E3A9"/>
+  const map = `<svg class="streets" viewBox="0 0 390 760" preserveAspectRatio="xMidYMin slice" aria-hidden="true">
+    <rect width="390" height="760" fill="#F4E6CC"/>
+    <path d="M250 0 C220 160 300 300 240 440 S200 600 230 760 L300 760 C270 600 280 500 310 420 S300 160 320 0z" fill="#B9DDEB"/>
+    <rect x="0" y="330" width="90" height="170" rx="14" fill="#C5E3A9"/>
     <g stroke="#FFFDF8" stroke-width="14" fill="none" stroke-linecap="round">
-      <path d="M-10 140 L400 110"/><path d="M60 -10 L120 340"/><path d="M180 -10 L170 340"/><path d="M-10 260 L400 230"/><path d="M300 -10 L390 120"/>
+      <path d="M-10 250 L400 210"/><path d="M60 -10 L120 770"/><path d="M180 -10 L170 770"/><path d="M-10 470 L400 420"/><path d="M300 -10 L390 220"/>
     </g>
-    <g stroke="#FFFDF8" stroke-width="6" fill="none"><path d="M0 60 L390 40"/><path d="M240 120 L260 330"/><path d="M0 320 L180 180"/></g>
+    <g stroke="#FFFDF8" stroke-width="6" fill="none"><path d="M0 130 L390 100"/><path d="M240 220 L260 770"/><path d="M0 620 L180 340"/></g>
   </svg>`;
   const pins = BARS.map((b) => {
     const hit = list.find((x) => x.b.id === b.id);
     const [x, y] = PIN_POS[b.id] || [50, 50];
     const min = hit ? hit.pours.slice().sort((a, c) => a.price - c.price)[0] : null;
-    return `<button class="pin ${hit ? "" : "dim"}" style="left:${x}%;top:${y}%" data-bar="${b.id}" aria-label="${esc(b.name)}">
+    return `<button class="pin ${hit ? "" : "dim"}" style="left:${x}%" data-y="${y}" data-bar="${b.id}" aria-label="${esc(b.name)}">
       ${hit ? `<span class="tagp">${d ? won(min.price) : esc(b.name)}</span>` : ""}${I.mapPin(hit ? "#F9BAA6" : "#FFFDF8")}</button>`;
   }).join("");
 
@@ -535,8 +632,8 @@ function nearby({ parts }) {
   }).join("");
 
   return {
-    html: `<section class="screen">
-      <div class="map">${map}${pins}<span class="me" aria-label="내 위치"></span>
+    html: `<section class="screen nearby-screen">
+      <div class="map">${map}${pins}<span class="me" data-y="82" aria-label="내 위치"></span>
         <div class="search">${I.search}<span>내 주변 · ${d ? `${esc(shortName(d))} 한 잔` : "한 잔 할 수 있는 곳"}</span>
           ${d ? `<a href="#/nearby" style="margin-left:auto;color:var(--muted)" aria-label="술 선택 해제">${I.x.replace("<svg", '<svg width="16" height="16"')}</a>` : ""}</div>
         <div class="filters">
@@ -545,14 +642,68 @@ function nearby({ parts }) {
           <button class="chip" data-f="fresh" aria-pressed="${filters.fresh}">개봉 3일 이내</button>
         </div>
       </div>
-      <div class="sheet"><div class="grip"></div>
-        <p class="section-title" style="margin-top:0">${list.length ? `근처 ${list.length}곳에서 맛볼 수 있어요` : "조건에 맞는 곳이 없어요"}</p>
-        ${items || `<p class="empty">필터를 줄여보세요.</p>`}
+      <div class="sheet">
+        <div class="sheet-head" role="button" tabindex="0" aria-label="목록 펼치기 접기"><div class="grip"></div>
+          <p class="section-title" style="margin:0">${list.length ? `근처 ${list.length}곳에서 맛볼 수 있어요` : "조건에 맞는 곳이 없어요"}</p></div>
+        <div class="sheet-body">${items || `<p class="empty">필터를 줄여보세요.</p>`}</div>
       </div>
       ${tabbar("nearby")}
     </section>`,
     mount(el) {
-      el.querySelectorAll("[data-f]").forEach((b) => (b.onclick = () => { filters[b.dataset.f] = !filters[b.dataset.f]; render(); }));
+      el.querySelectorAll("[data-f]").forEach((b) => (b.onclick = () => { filters[b.dataset.f] = !filters[b.dataset.f]; buzz(5); render(); }));
+
+      // Bottom sheet with three resting heights. Drag the head, or tap it to switch.
+      const sheet = el.querySelector(".sheet");
+      const head = el.querySelector(".sheet-head");
+      const avail = () => el.clientHeight - el.querySelector(".tabbar").offsetHeight;
+      const snaps = () => ({ full: 124, mid: Math.round(el.clientHeight * 0.44), low: avail() - 88 });
+      const place = (y, smooth) => {
+        sheet.style.transition = smooth ? `top .34s ${EASE}` : "none";
+        sheet.style.top = `${y}px`;
+      };
+      place(snaps()[sheetSnap], false);
+      // Keep pins in the band that stays visible above the sheet at its middle height.
+      const band = [150, snaps().mid - 24];
+      el.querySelectorAll("[data-y]").forEach((p) => {
+        p.style.top = `${band[0] + ((Number(p.dataset.y) - 20) / 65) * (band[1] - band[0])}px`;
+      });
+      let sd = null;
+      head.addEventListener("pointerdown", (e) => {
+        sd = { id: e.pointerId, y: e.clientY, top: sheet.offsetTop, ly: e.clientY, lt: e.timeStamp, v: 0, moved: false };
+        try { head.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+      });
+      head.addEventListener("pointermove", (e) => {
+        if (!sd || e.pointerId !== sd.id) return;
+        const dy = e.clientY - sd.y;
+        if (Math.abs(dy) > 4) sd.moved = true;
+        const s = snaps();
+        place(Math.min(s.low + 30, Math.max(s.full - 30, sd.top + dy)), false);
+        const dt = e.timeStamp - sd.lt;
+        if (dt > 0) sd.v = 0.7 * ((e.clientY - sd.ly) / dt) + 0.3 * sd.v;
+        sd.ly = e.clientY;
+        sd.lt = e.timeStamp;
+      });
+      const sheetEnd = (e) => {
+        if (!sd || e.pointerId !== sd.id) return;
+        const { moved, v } = sd;
+        sd = null;
+        const s = snaps();
+        if (!moved) sheetSnap = sheetSnap === "mid" ? "full" : "mid";
+        else {
+          const aim = sheet.offsetTop + v * 160;
+          sheetSnap = Object.entries(s).sort((a, b) => Math.abs(a[1] - aim) - Math.abs(b[1] - aim))[0][0];
+        }
+        place(s[sheetSnap], true);
+        buzz(5);
+      };
+      head.addEventListener("pointerup", sheetEnd);
+      head.addEventListener("pointercancel", sheetEnd);
+      head.addEventListener("keydown", (e) => {
+        if (e.key !== "Enter" && e.key !== " ") return;
+        e.preventDefault();
+        sheetSnap = sheetSnap === "mid" ? "full" : "mid";
+        place(snaps()[sheetSnap], true);
+      });
       el.querySelectorAll("[data-bar]").forEach((b) => (b.onclick = () => go(`#/bar/${b.dataset.bar}${d ? `?drink=${d.id}` : ""}`)));
     },
   };
@@ -582,7 +733,7 @@ function bar({ parts, q }) {
     </div>`;
   };
   return {
-    html: `<section class="screen ${prevPath?.startsWith("/nearby") ? "slide-in" : ""}">
+    html: `<section class="screen">
       <div class="bar-hero" style="background:${BAR_COLOR[b.id]}">
         <span class="shape" style="width:220px;height:220px;right:-40px;top:-60px;background:rgba(255,253,248,.45)"></span>
         <span class="shape" style="width:160px;height:160px;left:40px;bottom:-90px;background:rgba(92,51,23,.12)"></span>
@@ -678,7 +829,7 @@ function review({ parts, q }) {
         if (form.reaction === "내 취향 아님") state.prefs = nudge(state.prefs || prefsFromAnswers([]), d, false);
         save();
         toast("후기가 맛 카드에 올라갔어요");
-        go(`#/card/${d.id}`, { replace: true });
+        go(`#/card/${d.id}`, { replace: true, dir: "back" });
       };
     },
   };
@@ -712,10 +863,10 @@ function log() {
     </section>`,
     mount(el) {
       el.querySelector("[data-reset]").onclick = () => {
-        if (confirm("취향, 끌린 술, 후기를 모두 지울까요?")) { reset(); go("#/", { replace: true }); }
+        if (confirm("취향, 끌린 술, 후기를 모두 지울까요?")) { reset(); dropFeed(); go("#/", { replace: true, dir: "back" }); }
       };
     },
   };
 }
 
-render();
+nav.start();
