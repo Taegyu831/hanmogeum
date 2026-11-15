@@ -1,14 +1,14 @@
-import { state, save, reset } from "./store.js?v=11151214";
-import { AXES, Q1, Q2, Q3, prefsFromAnswers, rank, nudge, tasteType, typeBlurb, typeBars, explain } from "./reco.js?v=11151214";
-import { createNav, swallowClick } from "./nav.js?v=11151214";
-import { buzz, burst } from "./fx.js?v=11151214";
-import { C, logoSVG, pourLogo, glyph, drinkArt, drinkPhoto, icon, stepGlass, reduceMotion, FOS } from "./brand.js?v=11151214";
+import { state, save, reset } from "./store.js?v=11151223";
+import { AXES, Q1, Q2, Q3, prefsFromAnswers, rank, nudge, tasteType, typeBlurb, typeBars, explain } from "./reco.js?v=11151223";
+import { createNav, swallowClick } from "./nav.js?v=11151223";
+import { buzz, burst } from "./fx.js?v=11151223";
+import { C, logoSVG, pourLogo, glyph, drinkArt, drinkPhoto, icon, stepGlass, reduceMotion, FOS } from "./brand.js?v=11151223";
 
 // 화면 모습과 흐름은 안드로이드 앱(design/ui-refresh)과 같게 맞췄다.
 // 웹에서만 정한 것: 예약하기(평가용 완료 알림), 후기, 내 기록, 아래 탭 막대.
 
 // 예전 index.html이 브라우저에 남아 있어도, 새 버전이 올라왔으면 스스로 새 주소로 다시 불러온다.
-const BUILD = "11151214";
+const BUILD = "11151223";
 function checkFresh() {
   fetch(`version.json?t=${Date.now()}`, { cache: "no-store" }).then((r) => r.json()).then(({ v }) => {
     if (!v || v === BUILD) return;
@@ -24,7 +24,7 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "
 const won = (n) => n.toLocaleString("ko-KR") + "원";
 
 /* ---------- 데이터 ---------- */
-const load = (f) => fetch(`data/${f}?v=11151214`).then((r) => r.json());
+const load = (f) => fetch(`data/${f}?v=11151223`).then((r) => r.json());
 const [DRINKS, BARS, CHIPS, SAMPLE_REVIEWS] = await Promise.all(
   ["drinks.json", "bars.json", "chips.json", "reviews.json"].map(load));
 const drinkById = Object.fromEntries(DRINKS.map((d) => [d.id, d]));
@@ -413,7 +413,6 @@ function playResult(el, slices, intro) {
   if (!intro) {
     drawPie(svg, slices, 360);
     el.querySelectorAll("[data-leg]").forEach((l) => l.classList.add("in"));
-    el.querySelector("[data-next]").hidden = true;
     recs.forEach((r) => r.classList.add("in"));
     return;
   }
@@ -442,24 +441,18 @@ function playResult(el, slices, intro) {
         drawPie(svg, slices, e * 360);
         el.querySelectorAll("[data-leg] [data-pct]").forEach((b) => (b.textContent = `${Math.round(e * Number(b.dataset.pct))}%`));
         if (p < 1) requestAnimationFrame(tick);
-        else el.querySelector("[data-next]").classList.add("in");
+        else setTimeout(revealRecs, 550);
       };
       requestAnimationFrame(tick);
     }, 1700);
   });
-  // 한 페이지로 이어져 있고, 처음 아래로 넘기는 순간 추천 술이 아래에서 올라오며 제자리를 잡고
-  // 스크롤 위치를 추천 칸 맨 위에 맞춘다. 다시 위로 올리면 바로 위에 유형과 원반이 있다.
-  const recsEl = el.querySelector("[data-recs]");
-  let revealed = false;
-  const onScroll = () => {
-    if (revealed || scroll.scrollTop < 4) return;
-    revealed = true;
-    scroll.removeEventListener("scroll", onScroll);
-    el.querySelector("[data-next]").classList.remove("in");
+  // 원반까지 다 그려지면 손댈 필요 없이 추천 술이 올라오고, 화면도 추천 칸 맨 위로 스르륵 옮겨 간다.
+  // 다시 위로 올리면 바로 위에 유형과 원반이 그대로 있다.
+  function revealRecs() {
+    if (!el.isConnected) return;
     showRecs();
-    scroll.scrollTo({ top: recsEl.offsetTop - 4, behavior: "smooth" });
-  };
-  scroll.addEventListener("scroll", onScroll, { passive: true });
+    scroll.scrollTo({ top: el.querySelector("[data-recs]").offsetTop - 4, behavior: "smooth" });
+  }
 }
 
 function result() {
@@ -516,7 +509,6 @@ function result() {
             <ul class="legend">${slices.map((x, i) => `<li data-leg style="--d:${i}"><i style="background:${x.color}"></i><span class="grow">${x.label}</span><b data-pct="${x.pct}">${x.pct}%</b></li>`).join("")}</ul>
           </div>
         </div>
-        <p class="res-next" data-next aria-hidden="true">아래로 넘기면 추천 술${icon.chevronDown(16)}</p>
       </section>
       <section class="res-recs pad" data-recs>
         <h2 class="t-tl">나에게 맞는 첫 한 모금</h2>
@@ -584,7 +576,7 @@ function reelHTML(d, i, total) {
     <article class="reel" style="--tint:${TINT[d.category] || C.surfaceVariant}" aria-label="${esc(d.name)}">
       <div class="top"><span class="cat">${esc(d.category)}</span><span class="grow"></span>
         <span class="count" aria-label="${total}잔 중 ${i + 1}번째">${i + 1} / ${total}</span></div>
-      <div class="visual"><span class="glow" aria-hidden="true"></span>${drinkPhoto(d, 210, 300)}</div>
+      <div class="visual"><span class="glow" aria-hidden="true"></span>${drinkPhoto(d, 210, 300, i > 1)}</div>
       <button class="swipe-cue" data-open aria-label="${esc(d.name)} 맛 카드 열기. 왼쪽으로 밀어도 열려요">
         <span class="hand">${icon.hand(22)}</span><span class="chev">${icon.chevronLeft(14)}${icon.chevronLeft(14)}</span><span>맛 카드</span></button>
       <div class="info">
@@ -725,6 +717,12 @@ function feed() {
       }
       bind(pager);
       el.querySelector(".feed-head [data-liked]").onclick = () => openLiked(el);
+
+      // 지금 보고 있는 잔에서만 '맛 카드' 안내가 움직인다 (화면 밖 잔들은 멈춰서 스크롤이 가볍다)
+      const curIO = new IntersectionObserver((ents) => ents.forEach((e) => e.target.classList.toggle("cur", e.isIntersecting)), { root: pager, threshold: 0.6 });
+      const watch = () => pager.querySelectorAll(".page[data-id]:not([data-watched])").forEach((p) => { p.dataset.watched = 1; curIO.observe(p); });
+      watch();
+      new MutationObserver(watch).observe(pager, { childList: true });
 
       // 첫 잔에서 한 번만: 카드를 살짝 왼쪽으로 밀었다 돌려놓아 '밀면 뭔가 있다'를 보여 준다.
       if (!state.hintSeen && !reduceMotion()) {

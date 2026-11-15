@@ -248,8 +248,8 @@ export function drinkArt(d, w = 72, h = 96) {
 
 // 크게 보이는 곳(피드, 맛 카드)에만 쓰는 실사 이미지. 작은 썸네일은 위의 그림을 그대로 쓴다.
 // 사진은 ChatGPT로 만든 상표 없는 병 이미지를 술 ID별로 잘라 img/drinks에 둔 것.
-export function drinkPhoto(d, w, h) {
-  return `<span class="art photo" style="width:${w}px;height:${h}px" aria-hidden="true"><img src="img/drinks/${d.id}.webp" alt="" decoding="async"></span>`;
+export function drinkPhoto(d, w, h, lazy = false) {
+  return `<span class="art photo" style="width:${w}px;height:${h}px" aria-hidden="true"><img src="img/drinks/${d.id}.webp" alt="" decoding="async"${lazy ? ' loading="lazy"' : ""}></span>`;
 }
 
 /* ---------- 작은 아이콘 ---------- */
