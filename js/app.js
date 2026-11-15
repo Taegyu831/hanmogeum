@@ -1,8 +1,8 @@
-import { state, save, reset } from "./store.js?v=11151155";
-import { AXES, Q1, Q2, Q3, prefsFromAnswers, rank, nudge, tasteType, typeBlurb, typeBars, explain } from "./reco.js?v=11151155";
-import { createNav, swallowClick } from "./nav.js?v=11151155";
-import { buzz, burst } from "./fx.js?v=11151155";
-import { C, logoSVG, pourLogo, glyph, drinkArt, icon, stepGlass, reduceMotion, FOS } from "./brand.js?v=11151155";
+import { state, save, reset } from "./store.js?v=11151159";
+import { AXES, Q1, Q2, Q3, prefsFromAnswers, rank, nudge, tasteType, typeBlurb, typeBars, explain } from "./reco.js?v=11151159";
+import { createNav, swallowClick } from "./nav.js?v=11151159";
+import { buzz, burst } from "./fx.js?v=11151159";
+import { C, logoSVG, pourLogo, glyph, drinkArt, icon, stepGlass, reduceMotion, FOS } from "./brand.js?v=11151159";
 
 // 화면 모습과 흐름은 안드로이드 앱(design/ui-refresh)과 같게 맞췄다.
 // 웹에서만 정한 것: 예약하기(평가용 완료 알림), 후기, 내 기록, 아래 탭 막대.
@@ -12,7 +12,7 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "
 const won = (n) => n.toLocaleString("ko-KR") + "원";
 
 /* ---------- 데이터 ---------- */
-const load = (f) => fetch(`data/${f}?v=11151155`).then((r) => r.json());
+const load = (f) => fetch(`data/${f}?v=11151159`).then((r) => r.json());
 const [DRINKS, BARS, CHIPS, SAMPLE_REVIEWS] = await Promise.all(
   ["drinks.json", "bars.json", "chips.json", "reviews.json"].map(load));
 const drinkById = Object.fromEntries(DRINKS.map((d) => [d.id, d]));
@@ -401,6 +401,7 @@ function playResult(el, slices, intro) {
   if (!intro) {
     drawPie(svg, slices, 360);
     el.querySelectorAll("[data-leg]").forEach((l) => l.classList.add("in"));
+    el.querySelector("[data-next]").hidden = true;
     recs.forEach((r) => r.classList.add("in"));
     return;
   }
@@ -434,11 +435,19 @@ function playResult(el, slices, intro) {
       requestAnimationFrame(tick);
     }, 1700);
   });
-  // 추천 칸이 화면에 들어오면 하나씩 내려앉는다
-  const io = new IntersectionObserver((ents) => {
-    if (ents.some((e) => e.isIntersecting)) { showRecs(); io.disconnect(); }
-  }, { root: scroll, threshold: 0.15 });
-  io.observe(el.querySelector("[data-recs]"));
+  // 한 페이지로 이어져 있고, 처음 아래로 넘기는 순간 추천 술이 아래에서 올라오며 제자리를 잡고
+  // 스크롤 위치를 추천 칸 맨 위에 맞춘다. 다시 위로 올리면 바로 위에 유형과 원반이 있다.
+  const recsEl = el.querySelector("[data-recs]");
+  let revealed = false;
+  const onScroll = () => {
+    if (revealed || scroll.scrollTop < 4) return;
+    revealed = true;
+    scroll.removeEventListener("scroll", onScroll);
+    el.querySelector("[data-next]").classList.remove("in");
+    showRecs();
+    scroll.scrollTo({ top: recsEl.offsetTop - 4, behavior: "smooth" });
+  };
+  scroll.addEventListener("scroll", onScroll, { passive: true });
 }
 
 function result() {
@@ -495,7 +504,7 @@ function result() {
             <ul class="legend">${slices.map((x, i) => `<li data-leg style="--d:${i}"><i style="background:${x.color}"></i><span class="grow">${x.label}</span><b data-pct="${x.pct}">${x.pct}%</b></li>`).join("")}</ul>
           </div>
         </div>
-        <p class="res-next" data-next aria-hidden="true">아래로 넘기면 추천 술${icon.chevronDown ? icon.chevronDown(16) : ""}</p>
+        <p class="res-next" data-next aria-hidden="true">아래로 넘기면 추천 술${icon.chevronDown(16)}</p>
       </section>
       <section class="res-recs pad" data-recs>
         <h2 class="t-tl">나에게 맞는 첫 한 모금</h2>

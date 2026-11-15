@@ -197,8 +197,7 @@ textarea, input { -webkit-user-select: text; user-select: text; }
 .type-row .arts { gap: 2px; width: 70px; justify-content: center; }
 
 /* ---------- 결과 ---------- */
-.res-scroll { scroll-snap-type: y mandatory; }
-.res-hero { min-height: 100%; scroll-snap-align: start; scroll-snap-stop: always; display: flex; flex-direction: column; padding-top: 8px; padding-bottom: 16px; }
+.res-hero { display: flex; flex-direction: column; padding-top: 8px; padding-bottom: 8px; }
 .res-title { align-self: flex-start; transform-origin: center; text-align: left; }
 .res-blurb { margin-top: 8px; }
 .res-chart { margin-top: 28px; }
@@ -207,11 +206,11 @@ textarea, input { -webkit-user-select: text; user-select: text; }
 .legend li { display: flex; align-items: center; gap: 8px; font-size: 15px; line-height: 22px; font-weight: 500; }
 .legend i { width: 10px; height: 10px; border-radius: 50%; flex: none; }
 .legend b { font-size: 20px; line-height: 26px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
-.res-next { margin-top: auto; padding-top: 16px; display: flex; align-items: center; justify-content: center; gap: 4px; font-size: 13px; color: var(--on-surface-v); }
+.res-next { padding-top: 28px; display: flex; align-items: center; justify-content: center; gap: 4px; font-size: 13px; color: var(--on-surface-v); }
 .res-next svg { animation: nudgeDown 1.6s ease-in-out infinite; }
 @keyframes nudgeDown { 50% { transform: translateY(4px); } }
-.res-recs { scroll-snap-align: start; scroll-snap-stop: always; padding-top: 20px; padding-bottom: 32px; }
-.res-recs > h2, .res-recs > p, .res-recs .rec { opacity: 0; transform: translateY(-14px); transition: opacity .5s var(--ease), transform .6s cubic-bezier(.2, .7, .3, 1); }
+.res-recs { padding-top: 24px; padding-bottom: 32px; }
+.res-recs > h2, .res-recs > p, .res-recs .rec { opacity: 0; transform: translateY(40px); transition: opacity .5s var(--ease), transform .7s cubic-bezier(.2, .7, .3, 1); }
 .res-recs .in { opacity: 1; transform: none; }
 .res-intro .res-title { opacity: 0; }
 .res-intro .res-blurb, .res-intro .res-next { opacity: 0; transition: opacity .5s var(--ease); }
