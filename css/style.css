@@ -204,7 +204,7 @@ textarea, input { -webkit-user-select: text; user-select: text; }
 .sel[aria-checked="true"] .ring > i { background: #fff; }
 
 /* ---------- 유형 둘러보기 ---------- */
-.type-row { width: 100%; display: flex; align-items: center; gap: 16px; padding: 16px 0; border-bottom: 1px solid var(--divider); text-align: left; }
+.type-row { display: flex; align-items: center; gap: 16px; padding-top: 16px; padding-bottom: 16px; border-bottom: 1px solid var(--divider); text-align: left; }
 .type-row .arts { gap: 2px; width: 70px; justify-content: center; }
 
 /* ---------- 결과 ---------- */
@@ -367,7 +367,7 @@ textarea, input { -webkit-user-select: text; user-select: text; }
 .fpill { flex: none; min-height: 44px; padding: 0 16px; border-radius: 999px; background: var(--surface-v); display: inline-flex; align-items: center; gap: 4px; font-size: 14px; font-weight: 500; white-space: nowrap; }
 .fpill[aria-selected="true"], .fpill[aria-pressed="true"] { background: var(--primary); border-color: var(--primary); color: var(--on-primary); }
 .fpills-wrap { display: flex; flex-wrap: wrap; gap: 8px; }
-.bar-card { display: flex; flex-direction: column; gap: 10px; width: 100%; padding: 16px 0 20px; border-bottom: 1px solid var(--divider); color: inherit; }
+.bar-card { display: flex; flex-direction: column; gap: 10px; padding-top: 16px; padding-bottom: 20px; border-bottom: 1px solid var(--divider); color: inherit; }
 
 .has-box { display: flex; }
 .arts { display: flex; gap: 8px; align-items: center; }
@@ -414,7 +414,7 @@ textarea, input { -webkit-user-select: text; user-select: text; }
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .field { width: 100%; border-radius: var(--r-m); border: 0; background: var(--surface-v); padding: 12px; font-size: 16px; line-height: 24px; resize: none; }
 .field:focus { outline: 2px solid var(--primary); border-color: transparent; }
-.mini { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--divider); }
+.mini { display: flex; align-items: center; gap: 12px; padding-top: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--divider); }
 
 /* ---------- 탭 막대 (웹 전용: 탐색 / 근처 한 잔 / 내 기록) ---------- */
 .tabbar { flex: none; display: flex; background: var(--bg); border-top: 1px solid var(--divider); padding: 6px 0 calc(6px + env(safe-area-inset-bottom)); }
