@@ -1,8 +1,8 @@
-import { state, save, reset } from "./store.js?v=11151122";
-import { Q1, Q2, Q3, prefsFromAnswers, rank, nudge, tasteType, typeBlurb, typeBars, explain } from "./reco.js?v=11151122";
-import { createNav, swallowClick } from "./nav.js?v=11151122";
-import { buzz, burst } from "./fx.js?v=11151122";
-import { C, logoSVG, pourLogo, glyph, drinkArt, icon, stepGlass, reduceMotion, FOS } from "./brand.js?v=11151122";
+import { state, save, reset } from "./store.js?v=11151134";
+import { Q1, Q2, Q3, prefsFromAnswers, rank, nudge, tasteType, typeBlurb, typeBars, explain } from "./reco.js?v=11151134";
+import { createNav, swallowClick } from "./nav.js?v=11151134";
+import { buzz, burst } from "./fx.js?v=11151134";
+import { C, logoSVG, pourLogo, glyph, drinkArt, icon, stepGlass, reduceMotion, FOS } from "./brand.js?v=11151134";
 
 // 화면 모습과 흐름은 안드로이드 앱(design/ui-refresh)과 같게 맞췄다.
 // 웹에서만 정한 것: 예약하기(평가용 완료 알림), 후기, 내 기록, 아래 탭 막대.
@@ -12,7 +12,7 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "
 const won = (n) => n.toLocaleString("ko-KR") + "원";
 
 /* ---------- 데이터 ---------- */
-const load = (f) => fetch(`data/${f}?v=11151122`).then((r) => r.json());
+const load = (f) => fetch(`data/${f}?v=11151134`).then((r) => r.json());
 const [DRINKS, BARS, CHIPS, SAMPLE_REVIEWS] = await Promise.all(
   ["drinks.json", "bars.json", "chips.json", "reviews.json"].map(load));
 const drinkById = Object.fromEntries(DRINKS.map((d) => [d.id, d]));
@@ -235,7 +235,7 @@ function question({ parts }) {
   let opts = "";
   if (n === 1) {
     opts = `<div class="tiles" role="group" aria-label="좋아하는 음료">${Q1.map((o) => `<button class="sel tile press" role="checkbox" aria-checked="${a.q1.includes(o.id)}" data-id="${o.id}">
-      <span class="glyph-bg">${glyph(o.id, 36)}</span><span class="t-tm">${o.label}</span><span class="t-bm c-v">${o.sub}</span>
+      <span class="glyph">${glyph(o.id, 32)}</span><span class="t-tm">${o.label}</span><span class="t-bm c-v">${o.sub}</span>
       <span class="badge" aria-hidden="true">${icon.check(14)}</span></button>`).join("")}</div>`;
   } else if (n === 2) {
     opts = `<div class="reasons" role="group" aria-label="아쉬웠던 점">${Q2.map((o) => `<button class="sel reason press" role="checkbox" aria-checked="${a.q2.includes(o.id)}" data-id="${o.id}">
@@ -243,7 +243,7 @@ function question({ parts }) {
       <span class="eff"><p>→ ${Q2_EFFECT[o.id] || ""}</p></span></button>`).join("")}</div>`;
   } else {
     opts = `<div class="radios" role="radiogroup" aria-label="새로운 술을 만나는 방식">${Q3.map((o) => `<button class="sel radio-card press" role="radio" aria-checked="${a.q3 === o.id}" data-id="${o.id}">
-      <span class="glyph-bg">${glyph(o.id, 40)}</span>
+      <span class="glyph">${glyph(o.id, 32)}</span>
       <span class="grow stack" style="gap:2px"><span class="t-tm">${o.label}</span><span class="t-bm c-v">${Q3_SUB[o.id] || o.sub}</span></span>
       <span class="ring" aria-hidden="true"><i></i></span></button>`).join("")}</div>`;
   }
@@ -347,11 +347,10 @@ function result() {
     </button>`;
   };
   const content = `<div class="stack" style="flex:1;min-height:0" data-content>
-    <div class="topbar"><button class="icon-btn" data-back aria-label="이전 질문으로">${icon.back()}</button><span class="grow"></span>
-      <span class="t-bs c-v" style="padding-right:12px">평가용 예시 데이터</span></div>
+    <div class="topbar"><button class="icon-btn" data-back aria-label="이전 질문으로">${icon.back()}</button><span class="grow"></span></div>
     <div class="scroll"><div class="pad" style="padding-top:8px;padding-bottom:32px">
       <p class="t-ll c-p">${state.skipped ? "기본 탐색 유형" : "나의 취향 유형"}</p>
-      <h1 class="t-hl" style="font-size:30px;line-height:38px;margin-top:4px">${esc(typeName())}</h1>
+      <h1 class="t-hl" style="font-size:34px;line-height:42px;margin-top:4px">${esc(typeName())}</h1>
       <p class="t-bl c-v" style="margin-top:8px">${esc(typeBlurb(base))}</p>
       <div class="card taste-bars" style="margin-top:24px">
         <p class="t-tm">내가 끌리는 맛</p>
@@ -359,7 +358,7 @@ function result() {
           <div class="row"><span class="t-bl" style="font-weight:500">${b.label}</span><span class="t-bm c-v" data-pct="${b.pct}">0%</span></div>
           <div class="track"><div class="fill" style="background:${BAR_TONES[i % 4]};transition-delay:${120 * i + 150}ms" data-w="${b.pct}"></div></div></div>`).join("")}
       </div>
-      ${picks.length ? `<p class="t-ll c-v" style="margin-top:16px">내가 고른 답</p><div class="picks">${picks.map((p) => `<span>${esc(p)}</span>`).join("")}</div>` : ""}
+      ${picks.length ? `<p class="t-ll c-v" style="margin-top:24px">내가 고른 답</p><p class="t-bl" style="margin-top:4px">${picks.map(esc).join(" · ")}</p>` : ""}
       <h2 class="t-tl" style="margin-top:32px">나에게 맞는 첫 한 모금</h2>
       <p class="t-bm c-v" style="margin-top:4px">끌리는 술을 눌러 하트를 남겨 두세요.</p>
       <div class="stack gap12" style="margin-top:12px">${top5.map(recCard).join("")}</div>
@@ -677,7 +676,7 @@ function card({ parts }) {
   };
   return {
     html: `<section class="screen">
-      ${topbar("맛 카드", { backLabel: "추천 피드로 돌아가기", trailing: `<span class="t-bs c-v" style="padding-right:12px">평가용 예시 데이터</span>` })}
+      ${topbar("맛 카드", { backLabel: "추천 피드로 돌아가기" })}
       <div class="scroll"><div class="pad stack" style="gap:24px;padding-bottom:32px">
         <div class="row gap16">${drinkArt(d, 104, 140)}
           <div class="stack gap4"><p class="t-ll c-p">${pos ? `피드 ${pos}번째 잔` : esc(d.category)}</p>
@@ -825,7 +824,7 @@ function nearby({ parts }) {
               <button class="fpill" role="tab" data-cat="" aria-selected="${!cat}">${!cat ? icon.check(16) : ""}전체 ${BARS.length}</button>
               ${CATEGORIES.map((c) => `<button class="fpill" role="tab" data-cat="${esc(c)}" aria-selected="${cat === c}">${cat === c ? icon.check(16) : ""}${esc(c)} ${BARS.filter((b) => catsOf(b).includes(c)).length}</button>`).join("")}
             </div></div>`}
-        <div class="pad stack gap4" style="padding-top:8px"><h2 class="t-tm">${title}</h2>${virtualNote()}</div>
+        <div class="pad stack gap4" style="padding-top:8px"><h2 class="t-tm">${title}</h2></div>
         ${list.length ? list.map((b) => `<div class="pad">${barCard(b, drink, cat)}</div>`).join("")
         : `<div class="pad"><div class="card empty-card"><h3 class="t-tm">조건에 맞는 가상 바가 없어요</h3>
             <p class="t-bl">고른 조건을 지우면 가상 바 ${BARS.length}곳을 모두 볼 수 있어요.</p><button class="btn btn-s" data-clear>전체 바 보기</button></div></div>`}
@@ -905,7 +904,7 @@ function bar({ parts, q }) {
         <div class="stack gap8">
           <h2 class="t-hl" style="font-size:26px;line-height:34px">${esc(b.name)}</h2>
           <p class="t-bl c-v">${esc(b.area)} · ${esc(b.distance)} · ${esc(b.hours)}</p>
-          <div class="row gap4" style="flex-wrap:wrap">${catsOf(b).map((c) => `<span class="tag">${esc(c)}</span>`).join("")}<span class="tag">${volRange(ms)}</span><span class="tag">${priceRange(ms)}</span></div>
+          <p class="t-bm">${[...catsOf(b), volRange(ms), priceRange(ms)].map(esc).join(" · ")}</p>
           ${virtualNote()}
         </div>
         ${focusMenu ? `<div class="card-pc stack gap8"><p class="t-ll c-p">찾던 술이 있어요</p>
@@ -992,7 +991,7 @@ function tasting({ parts, q }) {
   const fills = () => [1, 2, 3].map((s) => (s < step ? 1 : s === step ? 0.55 : 0));
   const progress = () => `<div class="steps" role="img" aria-label="3단계 중 ${step}단계">${["조건 확인", "맛보기", "정리"].map((l, i) =>
     `<div class="${i + 1 === step ? "now" : ""}">${stepGlass(1, i + 1 <= step)}<span>${i + 1}. ${l}</span></div>`).join("")}</div>`;
-  const header = () => `<div class="card row gap12" style="padding:12px">${drinkArt(m.drink, 48, 64)}
+  const header = () => `<div class="card row gap12">${drinkArt(m.drink, 48, 64)}
     <div class="grow stack" style="gap:2px"><span class="t-bs c-v">${esc(b.name)} · ${esc(b.distance)}</span><span class="t-tm">${esc(m.drink.name)}</span>
       <span class="t-bm c-p">${m.ml}mL · 예시 ${won(m.price)} · ${esc(m.drink.abvLabel)}</span></div></div>`;
   const body = () => {
@@ -1090,7 +1089,7 @@ function review({ parts, q }) {
     html: `<section class="screen">
       ${topbar("맛본 후기")}
       <div class="scroll"><div class="pad stack" style="gap:24px;padding-bottom:32px">
-        <div class="card row gap12" style="padding:12px">${drinkArt(d, 48, 64)}<div class="grow stack" style="gap:2px">
+        <div class="card row gap12">${drinkArt(d, 48, 64)}<div class="grow stack" style="gap:2px">
           <span class="t-bs c-v">${b ? `${esc(b.name)} · ` : ""}${ml ? `${esc(ml)}mL` : "직접 맛본 후기"}</span><span class="t-tm">${esc(d.name)}</span></div></div>
         <div class="stack gap8"><h2 class="t-tm">내 입맛에 맞았어요?</h2>
           <div class="reacts" role="radiogroup" aria-label="내 입맛에 맞았는지">${REACT.map(([r, s]) => `<button class="sel react press" role="radio" aria-checked="false" data-r="${r}"><span class="t-ll">${r}</span><span class="t-bs c-v">${s}</span></button>`).join("")}</div></div>
@@ -1162,7 +1161,7 @@ function log() {
           ${rsv.length ? rsv.map((r) => mini(drinkById[r.drinkId], `${barById[r.barId].name} · ${r.ml}mL`, `#/bar/${r.barId}?drink=${r.drinkId}`)).join("") : `<p class="t-bm c-v">바 정보에서 예약하기를 누르면 여기 모여요.</p>`}</div>
         <div><h2 class="t-tm" style="margin-bottom:8px">직접 맛본 후기 ${state.reviews.length}</h2>
           ${state.reviews.length ? state.reviews.map((r) => mini(drinkById[r.drinkId], `${r.reaction}${r.barId ? ` · ${barById[r.barId].name}` : ""}${r.text ? ` · ${r.text}` : ""}`)).join("") : `<p class="t-bm c-v">맛보기 체험을 마치고 후기를 남기면 여기 쌓여요.</p>`}</div>
-        <p class="t-bs c-v center">술, 바, 가격, 후기는 모두 평가용 예시 데이터예요.<br><button class="btn-t" data-reset>처음부터 다시 하기</button></p>
+        <p class="center"><button class="btn-t v" data-reset>처음부터 다시 하기</button></p>
       </div></div>
       ${tabbar("log")}
     </section>`,
