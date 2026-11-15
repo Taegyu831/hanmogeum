@@ -1,30 +1,19 @@
-import { state, save, reset } from "./store.js?v=11151223";
-import { AXES, Q1, Q2, Q3, prefsFromAnswers, rank, nudge, tasteType, typeBlurb, typeBars, explain } from "./reco.js?v=11151223";
-import { createNav, swallowClick } from "./nav.js?v=11151223";
-import { buzz, burst } from "./fx.js?v=11151223";
-import { C, logoSVG, pourLogo, glyph, drinkArt, drinkPhoto, icon, stepGlass, reduceMotion, FOS } from "./brand.js?v=11151223";
+import { state, save, reset } from "./store.js?v=11151234";
+import { AXES, Q1, Q2, Q3, prefsFromAnswers, rank, nudge, tasteType, typeBlurb, typeBars, explain } from "./reco.js?v=11151234";
+import { createNav, swallowClick } from "./nav.js?v=11151234";
+import { buzz, burst } from "./fx.js?v=11151234";
+import { C, logoSVG, pourLogo, glyph, drinkArt, drinkPhoto, icon, stepGlass, reduceMotion, FOS } from "./brand.js?v=11151234";
 
 // 화면 모습과 흐름은 안드로이드 앱(design/ui-refresh)과 같게 맞췄다.
 // 웹에서만 정한 것: 예약하기(평가용 완료 알림), 후기, 내 기록, 아래 탭 막대.
 
-// 예전 index.html이 브라우저에 남아 있어도, 새 버전이 올라왔으면 스스로 새 주소로 다시 불러온다.
-const BUILD = "11151223";
-function checkFresh() {
-  fetch(`version.json?t=${Date.now()}`, { cache: "no-store" }).then((r) => r.json()).then(({ v }) => {
-    if (!v || v === BUILD) return;
-    try { if (sessionStorage.getItem("hm.reloadedFor") === v) return; sessionStorage.setItem("hm.reloadedFor", v); } catch (e) { /* ignore */ }
-    location.replace(`${location.pathname}?v=${v}${location.hash}`);
-  }).catch(() => {});
-}
-checkFresh();
-document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") checkFresh(); });
 
 const app = document.getElementById("app");
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const won = (n) => n.toLocaleString("ko-KR") + "원";
 
 /* ---------- 데이터 ---------- */
-const load = (f) => fetch(`data/${f}?v=11151223`).then((r) => r.json());
+const load = (f) => fetch(`data/${f}?v=11151234`).then((r) => r.json());
 const [DRINKS, BARS, CHIPS, SAMPLE_REVIEWS] = await Promise.all(
   ["drinks.json", "bars.json", "chips.json", "reviews.json"].map(load));
 const drinkById = Object.fromEntries(DRINKS.map((d) => [d.id, d]));
@@ -416,7 +405,6 @@ function playResult(el, slices, intro) {
     recs.forEach((r) => r.classList.add("in"));
     return;
   }
-  el.classList.add("res-intro");
   el.querySelectorAll("[data-leg] [data-pct]").forEach((b) => (b.textContent = "0%"));
   drawPie(svg, slices, 0);
   const title = el.querySelector("[data-title]"), hero = el.querySelector("[data-hero]");
@@ -493,7 +481,7 @@ function result() {
       ${caution ? `<span class="t-bs c-v">참고: ${esc(caution)}</span>` : ""}
     </button>`;
   };
-  const content = `<div class="stack" style="flex:1;min-height:0" data-content>
+  const content = `<div class="stack ${intro ? "res-intro" : ""}" style="flex:1;min-height:0" data-content>
     <div class="topbar"><button class="icon-btn" data-back aria-label="이전 질문으로">${icon.back()}</button><span class="grow"></span></div>
     <div class="scroll res-scroll">
       <section class="res-hero pad" data-hero>

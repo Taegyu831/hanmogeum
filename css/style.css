@@ -221,7 +221,8 @@ textarea, input { -webkit-user-select: text; user-select: text; }
 .res-recs > h2, .res-recs > p, .res-recs .rec { opacity: 0; transform: translateY(40px); transition: opacity .5s var(--ease), transform .7s cubic-bezier(.2, .7, .3, 1), background-color .35s var(--ease); }
 .res-recs .in { opacity: 1; transform: none; }
 .res-intro .res-title { opacity: 0; }
-.res-intro .res-blurb, .res-intro .res-intro .res-chart { opacity: 0; transform: translateY(36px); transition: opacity .5s var(--ease), transform .7s cubic-bezier(.2, .7, .3, 1); }
+.res-intro .res-blurb { opacity: 0; transition: opacity .5s var(--ease); }
+.res-intro .res-chart { opacity: 0; transform: translateY(36px); transition: opacity .5s var(--ease), transform .7s cubic-bezier(.2, .7, .3, 1); }
 .res-intro .legend li { opacity: 0; transform: translateY(14px); transition: opacity .4s var(--ease), transform .5s cubic-bezier(.2, .7, .3, 1); transition-delay: calc(var(--d) * 120ms + 250ms); }
 .res-intro .in, .res-intro .legend li.in { opacity: 1; transform: none; }
 .analyzing { align-items: center; justify-content: center; gap: 24px; }
@@ -248,7 +249,7 @@ textarea, input { -webkit-user-select: text; user-select: text; }
 .head-btn:active { background: rgba(139, 39, 68, .08); }
 .pager { flex: 1; min-height: 0; overflow-y: auto; scroll-snap-type: y mandatory; overscroll-behavior: contain; scrollbar-width: none; }
 .pager::-webkit-scrollbar { display: none; }
-.page { position: relative; height: 100%; scroll-snap-align: start; scroll-snap-stop: always; background: var(--primary-c); overflow: hidden; content-visibility: auto; contain: layout paint; }
+.page { position: relative; height: 100%; scroll-snap-align: start; scroll-snap-stop: always; background: var(--primary-c); overflow: hidden; }
 .page[data-end] { background: var(--bg); padding: 8px 16px; }
 .page-behind { position: absolute; right: 0; top: 0; bottom: 0; width: 88px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: var(--primary); font-size: 14px; font-weight: 500; }
 .reel {

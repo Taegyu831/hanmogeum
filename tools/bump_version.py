@@ -12,14 +12,13 @@ v = time.strftime("%m%d%H%M")
 
 html = root / "index.html"
 s = html.read_text()
-s = re.sub(r'(css/style\.css|js/app\.js)(\?v=\w+)?"', rf'\1?v={v}"', s)
+s = re.sub(r'var FALLBACK = "\w*";', f'var FALLBACK = "{v}";', s)
 html.write_text(s)
 
 app = root / "js" / "app.js"
 s = app.read_text()
 s = re.sub(r'from "\./(\w+)\.js(\?v=\w+)?"', rf'from "./\1.js?v={v}"', s)
 s = re.sub(r"`data/\$\{f\}(\?v=\w+)?`", f"`data/${{f}}?v={v}`", s)
-s = re.sub(r'const BUILD = "\w*";', f'const BUILD = "{v}";', s)
 app.write_text(s)
 
 # 열려 있던 예전 화면이 새 버전을 알아채고 스스로 다시 불러오게 하는 표시
