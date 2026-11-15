@@ -246,6 +246,12 @@ export function drinkArt(d, w = 72, h = 96) {
   return `<span class="art" style="width:${w}px;height:${h}px" aria-hidden="true"><svg width="${cw}" height="${ch}" viewBox="0 0 40 100">${vessel(d)}</svg></span>`;
 }
 
+// 크게 보이는 곳(피드, 맛 카드)에만 쓰는 실사 이미지. 작은 썸네일은 위의 그림을 그대로 쓴다.
+// 사진은 ChatGPT로 만든 상표 없는 병 이미지를 술 ID별로 잘라 img/drinks에 둔 것.
+export function drinkPhoto(d, w, h) {
+  return `<span class="art photo" style="width:${w}px;height:${h}px" aria-hidden="true"><img src="img/drinks/${d.id}.webp" alt="" decoding="async"></span>`;
+}
+
 /* ---------- 작은 아이콘 ---------- */
 const HEART = "M12 20.5C12 20.5 3.5 15.3 3.5 9.2C3.5 6.4 5.6 4.5 8 4.5C9.7 4.5 11.2 5.5 12 6.9C12.8 5.5 14.3 4.5 16 4.5C18.4 4.5 20.5 6.4 20.5 9.2C20.5 15.3 12 20.5 12 20.5Z";
 export const icon = {

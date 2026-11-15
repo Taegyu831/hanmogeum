@@ -122,6 +122,10 @@ textarea, input { -webkit-user-select: text; user-select: text; }
 /* 술병 타일 */
 .art { flex: none; display: grid; place-items: center; }
 
+.art.photo { display: block; }
+.art.photo img { width: 100%; height: 100%; object-fit: contain; object-position: center bottom; display: block; }
+.reel .visual .art.photo { filter: drop-shadow(0 20px 22px rgba(43, 36, 48, .22)); }
+
 /* 누르면 살짝 작아지는 효과 */
 .press { transition: scale .2s var(--ease), background-color .18s, border-color .18s, box-shadow .18s; }
 .press:active { scale: .96; }

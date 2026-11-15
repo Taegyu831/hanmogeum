@@ -1,14 +1,14 @@
-import { state, save, reset } from "./store.js?v=11151203";
-import { AXES, Q1, Q2, Q3, prefsFromAnswers, rank, nudge, tasteType, typeBlurb, typeBars, explain } from "./reco.js?v=11151203";
-import { createNav, swallowClick } from "./nav.js?v=11151203";
-import { buzz, burst } from "./fx.js?v=11151203";
-import { C, logoSVG, pourLogo, glyph, drinkArt, icon, stepGlass, reduceMotion, FOS } from "./brand.js?v=11151203";
+import { state, save, reset } from "./store.js?v=11151214";
+import { AXES, Q1, Q2, Q3, prefsFromAnswers, rank, nudge, tasteType, typeBlurb, typeBars, explain } from "./reco.js?v=11151214";
+import { createNav, swallowClick } from "./nav.js?v=11151214";
+import { buzz, burst } from "./fx.js?v=11151214";
+import { C, logoSVG, pourLogo, glyph, drinkArt, drinkPhoto, icon, stepGlass, reduceMotion, FOS } from "./brand.js?v=11151214";
 
 // 화면 모습과 흐름은 안드로이드 앱(design/ui-refresh)과 같게 맞췄다.
 // 웹에서만 정한 것: 예약하기(평가용 완료 알림), 후기, 내 기록, 아래 탭 막대.
 
 // 예전 index.html이 브라우저에 남아 있어도, 새 버전이 올라왔으면 스스로 새 주소로 다시 불러온다.
-const BUILD = "11151203";
+const BUILD = "11151214";
 function checkFresh() {
   fetch(`version.json?t=${Date.now()}`, { cache: "no-store" }).then((r) => r.json()).then(({ v }) => {
     if (!v || v === BUILD) return;
@@ -24,7 +24,7 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "
 const won = (n) => n.toLocaleString("ko-KR") + "원";
 
 /* ---------- 데이터 ---------- */
-const load = (f) => fetch(`data/${f}?v=11151203`).then((r) => r.json());
+const load = (f) => fetch(`data/${f}?v=11151214`).then((r) => r.json());
 const [DRINKS, BARS, CHIPS, SAMPLE_REVIEWS] = await Promise.all(
   ["drinks.json", "bars.json", "chips.json", "reviews.json"].map(load));
 const drinkById = Object.fromEntries(DRINKS.map((d) => [d.id, d]));
@@ -584,7 +584,7 @@ function reelHTML(d, i, total) {
     <article class="reel" style="--tint:${TINT[d.category] || C.surfaceVariant}" aria-label="${esc(d.name)}">
       <div class="top"><span class="cat">${esc(d.category)}</span><span class="grow"></span>
         <span class="count" aria-label="${total}잔 중 ${i + 1}번째">${i + 1} / ${total}</span></div>
-      <div class="visual"><span class="glow" aria-hidden="true"></span>${drinkArt(d, 190, 250)}</div>
+      <div class="visual"><span class="glow" aria-hidden="true"></span>${drinkPhoto(d, 210, 300)}</div>
       <button class="swipe-cue" data-open aria-label="${esc(d.name)} 맛 카드 열기. 왼쪽으로 밀어도 열려요">
         <span class="hand">${icon.hand(22)}</span><span class="chev">${icon.chevronLeft(14)}${icon.chevronLeft(14)}</span><span>맛 카드</span></button>
       <div class="info">
@@ -825,7 +825,7 @@ function card({ parts }) {
     html: `<section class="screen">
       ${topbar("맛 카드", { backLabel: "추천 피드로 돌아가기" })}
       <div class="scroll"><div class="pad stack" style="gap:24px;padding-bottom:32px">
-        <div class="row gap16">${drinkArt(d, 104, 140)}
+        <div class="row gap16">${drinkPhoto(d, 104, 140)}
           <div class="stack gap4"><p class="t-ll c-p">${pos ? `피드 ${pos}번째 잔` : esc(d.category)}</p>
             <h2 class="t-hl" style="font-size:24px;line-height:32px">${esc(d.name)}</h2>
             <p class="t-bm c-v">${esc(d.category)} · ${esc(d.abvLabel)}</p></div></div>
