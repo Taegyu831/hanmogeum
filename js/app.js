@@ -298,6 +298,11 @@ function reelHTML(d, i, total) {
         <span class="pill glass">${esc(d.category)} · ${esc(abvShort(d))}</span>
         <h2 class="h1">${esc(d.oneLine)}</h2>
         <p class="lead">${esc(d.vsSoju)}</p>
+        ${(() => {
+          // 탐색에서 바로 맛보러 가기: 이 술을 파는 근처 바 수를 보여 주고 지도로 잇는다.
+          const n = BARS.filter((b) => b.pours.some((p) => p.drinkId === d.id)).length;
+          return n ? `<a class="pill glass taste-near" href="#/nearby/${d.id}">${I.pin.replace("<svg", '<svg width="14" height="14"')}근처 ${n}곳에서 맛보기 ${I.left.replace("<svg", '<svg width="12" height="12" style="transform:scaleX(-1)"')}</a>` : "";
+        })()}
       </div>
       <div class="reel-actions">
         <button data-like aria-pressed="${liked}"><span class="circle">${I.heart}</span>끌려요</button>
