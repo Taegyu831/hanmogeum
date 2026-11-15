@@ -256,6 +256,8 @@ export const icon = {
     `<svg width="${size}" height="${size}" viewBox="0 0 100 100" aria-hidden="true"><path d="M20 52L42 74L82 28" fill="none" stroke="currentColor" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
   cross: (size = 18, w = 13) =>
     `<svg width="${size}" height="${size}" viewBox="0 0 100 100" aria-hidden="true"><path d="M25 25L75 75M75 25L25 75" stroke="currentColor" stroke-width="${w}" stroke-linecap="round"/></svg>`,
+  hand: (size = 22) =>
+    `<svg width="${size}" height="${size}" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 12.5V5.2a1.6 1.6 0 0 1 3.2 0V11M12.2 10.2a1.6 1.6 0 0 1 3.2 0V11.6M15.4 11a1.6 1.6 0 0 1 3.2 0v3.6a6.4 6.4 0 0 1-6.4 6.4h-.8a5.4 5.4 0 0 1-4.5-2.4l-2.6-3.9a1.6 1.6 0 0 1 2.6-1.9L9 14.6" fill="#fff" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
   chevronLeft: (size = 18) =>
     `<svg width="${size}" height="${size}" viewBox="0 0 100 100" aria-hidden="true"><path d="M62 20L34 50L62 80" fill="none" stroke="currentColor" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
   chevronRight: (size = 20, w = 20) =>

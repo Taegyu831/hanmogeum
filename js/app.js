@@ -1,8 +1,8 @@
-import { state, save, reset } from "./store.js?v=11151112";
-import { Q1, Q2, Q3, prefsFromAnswers, rank, nudge, tasteType, typeBlurb, typeBars, explain } from "./reco.js?v=11151112";
-import { createNav, swallowClick } from "./nav.js?v=11151112";
-import { buzz, burst } from "./fx.js?v=11151112";
-import { C, logoSVG, pourLogo, glyph, drinkArt, icon, stepGlass, reduceMotion, FOS } from "./brand.js?v=11151112";
+import { state, save, reset } from "./store.js?v=11151122";
+import { Q1, Q2, Q3, prefsFromAnswers, rank, nudge, tasteType, typeBlurb, typeBars, explain } from "./reco.js?v=11151122";
+import { createNav, swallowClick } from "./nav.js?v=11151122";
+import { buzz, burst } from "./fx.js?v=11151122";
+import { C, logoSVG, pourLogo, glyph, drinkArt, icon, stepGlass, reduceMotion, FOS } from "./brand.js?v=11151122";
 
 // 화면 모습과 흐름은 안드로이드 앱(design/ui-refresh)과 같게 맞췄다.
 // 웹에서만 정한 것: 예약하기(평가용 완료 알림), 후기, 내 기록, 아래 탭 막대.
@@ -12,7 +12,7 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "
 const won = (n) => n.toLocaleString("ko-KR") + "원";
 
 /* ---------- 데이터 ---------- */
-const load = (f) => fetch(`data/${f}?v=11151112`).then((r) => r.json());
+const load = (f) => fetch(`data/${f}?v=11151122`).then((r) => r.json());
 const [DRINKS, BARS, CHIPS, SAMPLE_REVIEWS] = await Promise.all(
   ["drinks.json", "bars.json", "chips.json", "reviews.json"].map(load));
 const drinkById = Object.fromEntries(DRINKS.map((d) => [d.id, d]));
@@ -434,22 +434,25 @@ function reelHTML(d, i, total) {
   const n = barsFor(d.id).length;
   const why = reasonText(d);
   return `<div class="page" data-id="${d.id}" data-i="${i}">
-    <div class="page-behind" aria-hidden="true">${icon.chevronLeft()}맛 카드</div>
-    <article class="reel" style="background:linear-gradient(${TINT[d.category] || C.surfaceVariant}, ${C.surface})" aria-label="${esc(d.name)}">
+    <div class="page-behind" aria-hidden="true">${icon.chevronLeft(22)}맛 카드</div>
+    <article class="reel" style="--tint:${TINT[d.category] || C.surfaceVariant}" aria-label="${esc(d.name)}">
       <div class="top"><span class="cat">${esc(d.category)}</span><span class="grow"></span>
-        <span class="t-ll c-v" aria-label="${total}잔 중 ${i + 1}번째">${i + 1} / ${total}</span></div>
-      <div class="visual">${drinkArt(d, 150, 200)}
-        <button class="handle" data-open aria-label="${esc(d.name)} 맛 카드 열기">${icon.chevronLeft()}<span>맛<br>카드</span></button></div>
-      <h2 class="name">${esc(d.name)}</h2>
-      <p class="t-bm c-v">${esc(d.category)} · ${esc(d.abvLabel)}</p>
-      <p class="one">“${esc(d.oneLine)}”</p>
-      ${why ? `<p class="t-bm why">${esc(why)}</p>` : ""}
-      ${n ? `<a class="near-link" href="#/nearby/${d.id}" aria-label="${esc(d.name)}, 근처 ${n}곳에서 맛볼 수 있어요. 바 보기">${icon.pin()}근처 ${n}곳에서 10~30mL로 맛볼 수 있어요${icon.chevronRight(16, 16)}</a>` : `<div style="height:16px"></div>`}
-      <div class="fb-row">
-        <button class="fb-btn" data-like aria-pressed="${fbState === "like"}" aria-label="${esc(d.name)} 끌려요"><span class="ic">${icon.heart(fbState === "like", 22)}</span>끌려요</button>
-        <button class="fb-btn" data-pass aria-pressed="${fbState === "pass"}" aria-label="${esc(d.name)} 패스"><span class="ic">${icon.cross(18)}</span>패스</button>
+        <span class="count" aria-label="${total}잔 중 ${i + 1}번째">${i + 1} / ${total}</span></div>
+      <div class="visual"><span class="glow" aria-hidden="true"></span>${drinkArt(d, 190, 250)}</div>
+      <button class="swipe-cue" data-open aria-label="${esc(d.name)} 맛 카드 열기. 왼쪽으로 밀어도 열려요">
+        <span class="hand">${icon.hand(22)}</span><span class="chev">${icon.chevronLeft(14)}${icon.chevronLeft(14)}</span><span>맛 카드</span></button>
+      <div class="info">
+        <h2 class="name">${esc(d.name)}</h2>
+        <p class="meta">${esc(d.category)} · ${esc(d.abvLabel)}</p>
+        <p class="one">“${esc(d.oneLine)}”</p>
+        ${why ? `<p class="why">${esc(why)}</p>` : ""}
+        ${n ? `<a class="near-link" href="#/nearby/${d.id}" aria-label="${esc(d.name)}, 근처 ${n}곳에서 맛볼 수 있어요. 바 보기">${icon.pin()}근처 ${n}곳에서 10~30mL로 맛보기${icon.chevronRight(16, 16)}</a>` : ""}
+        ${i === 0 ? `<p class="first-hint">위로 넘기면 다음 잔 · 왼쪽으로 밀면 맛 카드</p>` : ""}
       </div>
-      ${i === 0 ? `<p class="t-bs c-v center" style="padding-top:8px">위로 넘기면 다음 잔 · 왼쪽으로 밀면 맛 카드</p>` : ""}
+      <div class="rail">
+        <button class="rail-btn like" data-like aria-pressed="${fbState === "like"}" aria-label="${esc(d.name)} 끌려요"><span class="ic">${icon.heart(fbState === "like", 26)}</span><span class="lb">끌려요</span></button>
+        <button class="rail-btn pass" data-pass aria-pressed="${fbState === "pass"}" aria-label="${esc(d.name)} 패스"><span class="ic">${icon.cross(20)}</span><span class="lb">패스</span></button>
+      </div>
     </article>
   </div>`;
 }
@@ -487,7 +490,7 @@ function feed() {
         const id = p.dataset.id;
         const like = p.querySelector("[data-like]");
         like.setAttribute("aria-pressed", state.liked.includes(id));
-        like.querySelector(".ic").innerHTML = icon.heart(state.liked.includes(id), 22);
+        like.querySelector(".ic").innerHTML = icon.heart(state.liked.includes(id), 26);
         p.querySelector("[data-pass]").setAttribute("aria-pressed", state.passed.includes(id));
       });
     },
@@ -542,7 +545,7 @@ function feed() {
             const on = !state.liked.includes(id);
             setFeedback(id, on ? true : null);
             like.setAttribute("aria-pressed", on);
-            like.querySelector(".ic").innerHTML = icon.heart(on, 22);
+            like.querySelector(".ic").innerHTML = icon.heart(on, 26);
             pass.setAttribute("aria-pressed", false);
             if (on) { buzz(12); burst(like.querySelector(".ic"), app, HEART_SPARKS); toast("끌린 맛을 다음 추천에 반영할게요"); }
             else toast("끌려요를 취소했어요");
@@ -561,7 +564,7 @@ function feed() {
             setFeedback(id, false);
             pass.setAttribute("aria-pressed", true);
             like.setAttribute("aria-pressed", false);
-            like.querySelector(".ic").innerHTML = icon.heart(false, 22);
+            like.querySelector(".ic").innerHTML = icon.heart(false, 26);
             updateCount();
             toast("비슷한 맛은 뒤로 미룰게요");
             rerankAfter(i);
@@ -583,7 +586,7 @@ function feed() {
         setTimeout(() => {
           if (!reel?.isConnected || state.hintSeen) return;
           reel.style.transition = "transform 380ms cubic-bezier(.4,0,.2,1)";
-          reel.style.transform = "translateX(-64px) rotate(-0.7deg)";
+          reel.style.transform = "translateX(-72px)";
           setTimeout(() => {
             reel.style.transition = "transform 700ms cubic-bezier(.3,1.5,.5,1)";
             reel.style.transform = "";
@@ -614,7 +617,7 @@ function dragReel(reel, open) {
       reel.style.transition = "none";
     }
     s.dx = dx < 0 ? dx : dx * 0.25;
-    reel.style.transform = `translateX(${s.dx}px) rotate(${s.dx / 90}deg)`;
+    reel.style.transform = `translateX(${s.dx}px)`;
   });
   const end = (e) => {
     if (!s || e.pointerId !== s.id) return;
