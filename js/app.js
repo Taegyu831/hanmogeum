@@ -1,18 +1,30 @@
-import { state, save, reset } from "./store.js?v=11151159";
-import { AXES, Q1, Q2, Q3, prefsFromAnswers, rank, nudge, tasteType, typeBlurb, typeBars, explain } from "./reco.js?v=11151159";
-import { createNav, swallowClick } from "./nav.js?v=11151159";
-import { buzz, burst } from "./fx.js?v=11151159";
-import { C, logoSVG, pourLogo, glyph, drinkArt, icon, stepGlass, reduceMotion, FOS } from "./brand.js?v=11151159";
+import { state, save, reset } from "./store.js?v=11151203";
+import { AXES, Q1, Q2, Q3, prefsFromAnswers, rank, nudge, tasteType, typeBlurb, typeBars, explain } from "./reco.js?v=11151203";
+import { createNav, swallowClick } from "./nav.js?v=11151203";
+import { buzz, burst } from "./fx.js?v=11151203";
+import { C, logoSVG, pourLogo, glyph, drinkArt, icon, stepGlass, reduceMotion, FOS } from "./brand.js?v=11151203";
 
 // 화면 모습과 흐름은 안드로이드 앱(design/ui-refresh)과 같게 맞췄다.
 // 웹에서만 정한 것: 예약하기(평가용 완료 알림), 후기, 내 기록, 아래 탭 막대.
+
+// 예전 index.html이 브라우저에 남아 있어도, 새 버전이 올라왔으면 스스로 새 주소로 다시 불러온다.
+const BUILD = "11151203";
+function checkFresh() {
+  fetch(`version.json?t=${Date.now()}`, { cache: "no-store" }).then((r) => r.json()).then(({ v }) => {
+    if (!v || v === BUILD) return;
+    try { if (sessionStorage.getItem("hm.reloadedFor") === v) return; sessionStorage.setItem("hm.reloadedFor", v); } catch (e) { /* ignore */ }
+    location.replace(`${location.pathname}?v=${v}${location.hash}`);
+  }).catch(() => {});
+}
+checkFresh();
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") checkFresh(); });
 
 const app = document.getElementById("app");
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const won = (n) => n.toLocaleString("ko-KR") + "원";
 
 /* ---------- 데이터 ---------- */
-const load = (f) => fetch(`data/${f}?v=11151159`).then((r) => r.json());
+const load = (f) => fetch(`data/${f}?v=11151203`).then((r) => r.json());
 const [DRINKS, BARS, CHIPS, SAMPLE_REVIEWS] = await Promise.all(
   ["drinks.json", "bars.json", "chips.json", "reviews.json"].map(load));
 const drinkById = Object.fromEntries(DRINKS.map((d) => [d.id, d]));

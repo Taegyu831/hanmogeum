@@ -19,5 +19,9 @@ app = root / "js" / "app.js"
 s = app.read_text()
 s = re.sub(r'from "\./(\w+)\.js(\?v=\w+)?"', rf'from "./\1.js?v={v}"', s)
 s = re.sub(r"`data/\$\{f\}(\?v=\w+)?`", f"`data/${{f}}?v={v}`", s)
+s = re.sub(r'const BUILD = "\w*";', f'const BUILD = "{v}";', s)
 app.write_text(s)
+
+# 열려 있던 예전 화면이 새 버전을 알아채고 스스로 다시 불러오게 하는 표시
+(root / "version.json").write_text(f'{{"v": "{v}"}}\n')
 print("version", v)
