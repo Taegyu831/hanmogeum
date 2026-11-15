@@ -595,11 +595,16 @@ function card({ parts }) {
 /* ---------- C. nearby, bar, review ---------- */
 const PIN_POS = { B1: [62, 64], B2: [28, 47], B3: [80, 34], B4: [47, 26] };
 const filters = { small: true, open: false, fresh: false };
+// 주종 필터 (하나만 고름). 특정 술을 고르지 않아도 '와인 있는 곳'처럼 바를 찾을 수 있다.
+let nearbyCat = null;
+const NEARBY_CATS = () => [...new Set(BARS.flatMap((b) => b.pours.map((p) => drinkById[p.drinkId]?.category)).filter(Boolean))];
 let sheetSnap = "mid";
 
 function nearby({ parts }) {
   const d = parts[1] ? drinkById[parts[1]] : null;
-  const passes = (p) => (!filters.small || p.ml <= 30) && (!filters.fresh || p.openedDays <= 3) && (!filters.open || openNow(p.bar.hours));
+  const cat = d ? null : nearbyCat;
+  const passes = (p) => (!filters.small || p.ml <= 30) && (!filters.fresh || p.openedDays <= 3) && (!filters.open || openNow(p.bar.hours))
+    && (!cat || drinkById[p.drinkId]?.category === cat);
   const list = BARS.map((b) => {
     const pours = b.pours.map((p) => ({ ...p, bar: b })).filter((p) => (!d || p.drinkId === d.id) && passes(p));
     return { b, pours };
@@ -619,7 +624,7 @@ function nearby({ parts }) {
     const [x, y] = PIN_POS[b.id] || [50, 50];
     const min = hit ? hit.pours.slice().sort((a, c) => a.price - c.price)[0] : null;
     return `<button class="pin ${hit ? "" : "dim"}" style="left:${x}%" data-y="${y}" data-bar="${b.id}" aria-label="${esc(b.name)}">
-      ${hit ? `<span class="tagp">${d ? won(min.price) : esc(b.name)}</span>` : ""}${I.mapPin(hit ? "#F9BAA6" : "#FFFDF8")}</button>`;
+      ${hit ? `<span class="tagp">${d || cat ? `${won(min.price)}~` : esc(b.name)}</span>` : ""}${I.mapPin(hit ? "#F9BAA6" : "#FFFDF8")}</button>`;
   }).join("");
 
   const items = list.map(({ b, pours }) => {
@@ -627,15 +632,19 @@ function nearby({ parts }) {
     return `<button class="bar-item" data-bar="${b.id}">
       <span class="sw" style="background:${BAR_COLOR[b.id]}"></span>
       <span><b>${esc(b.name)}</b><small>${esc(b.area.split(" ").at(-1))} · ${esc(b.distance)}</small></span>
-      <span class="price">${d ? `${p.ml}mL ${won(p.price)}` : `${pours.length}종`}<small>${d ? `개봉 ${p.openedDays}일째` : `${won(p.price)}부터`}</small></span>
+      <span class="price">${d ? `${p.ml}mL ${won(p.price)}` : cat ? `${esc(cat)} ${new Set(pours.map((x) => x.drinkId)).size}종` : `${pours.length}종`}<small>${d ? `개봉 ${p.openedDays}일째` : `${won(p.price)}부터`}</small></span>
     </button>`;
   }).join("");
 
   return {
     html: `<section class="screen nearby-screen">
       <div class="map">${map}${pins}<span class="me" data-y="82" aria-label="내 위치"></span>
-        <div class="search">${I.search}<span>내 주변 · ${d ? `${esc(shortName(d))} 한 잔` : "한 잔 할 수 있는 곳"}</span>
+        <div class="search">${I.search}<span>내 주변 · ${d ? `${esc(shortName(d))} 한 잔` : cat ? `${esc(cat)} 한 잔` : "한 잔 할 수 있는 곳"}</span>
           ${d ? `<a href="#/nearby" style="margin-left:auto;color:var(--muted)" aria-label="술 선택 해제">${I.x.replace("<svg", '<svg width="16" height="16"')}</a>` : ""}</div>
+        <div class="filters cats" role="radiogroup" aria-label="주종">
+          <button class="chip" data-cat="" role="radio" aria-checked="${!d && !cat}">전체</button>
+          ${NEARBY_CATS().map((c) => `<button class="chip" data-cat="${esc(c)}" role="radio" aria-checked="${cat === c}">${esc(c)}</button>`).join("")}
+        </div>
         <div class="filters">
           <button class="chip" data-f="small" aria-pressed="${filters.small}">10~30mL 소량</button>
           <button class="chip" data-f="open" aria-pressed="${filters.open}">지금 영업중</button>
@@ -651,19 +660,25 @@ function nearby({ parts }) {
     </section>`,
     mount(el) {
       el.querySelectorAll("[data-f]").forEach((b) => (b.onclick = () => { filters[b.dataset.f] = !filters[b.dataset.f]; buzz(5); render(); }));
+      el.querySelectorAll("[data-cat]").forEach((b) => (b.onclick = () => {
+        nearbyCat = b.dataset.cat || null;
+        buzz(5);
+        // 특정 술로 들어와 있었다면 그 선택을 풀고 주종 기준으로 바꾼다.
+        if (d) go("#/nearby", { replace: true }); else render();
+      }));
 
       // Bottom sheet with three resting heights. Drag the head, or tap it to switch.
       const sheet = el.querySelector(".sheet");
       const head = el.querySelector(".sheet-head");
       const avail = () => el.clientHeight - el.querySelector(".tabbar").offsetHeight;
-      const snaps = () => ({ full: 124, mid: Math.round(el.clientHeight * 0.44), low: avail() - 88 });
+      const snaps = () => ({ full: 170, mid: Math.round(el.clientHeight * 0.44), low: avail() - 88 });
       const place = (y, smooth) => {
         sheet.style.transition = smooth ? `top .34s ${EASE}` : "none";
         sheet.style.top = `${y}px`;
       };
       place(snaps()[sheetSnap], false);
       // Keep pins in the band that stays visible above the sheet at its middle height.
-      const band = [150, snaps().mid - 24];
+      const band = [222, snaps().mid - 24];
       el.querySelectorAll("[data-y]").forEach((p) => {
         p.style.top = `${band[0] + ((Number(p.dataset.y) - 20) / 65) * (band[1] - band[0])}px`;
       });
@@ -747,7 +762,10 @@ function bar({ parts, q }) {
         <div id="going"></div>
       </div>
       <div class="bottom">
-        <button class="btn btn-primary" data-go>길 찾기</button>
+        <div class="btn-row">
+          <button class="btn btn-secondary" data-go>길 찾기</button>
+          <button class="btn btn-primary" data-reserve>예약하기</button>
+        </div>
         <p class="note">주문과 결제는 매장에서 해요</p>
       </div>
     </section>`,
@@ -764,6 +782,33 @@ function bar({ parts, q }) {
         const d = drinkById[sel.drinkId];
         el.querySelector("#going").innerHTML = `<div class="going"><b>${esc(b.name)}로 가는 중이에요</b><br>
           실제 서비스에서는 지도 앱으로 길을 안내해요. ${esc(shortName(d))} ${sel.ml}mL를 맛본 뒤 아래 버튼으로 후기를 남겨주세요.</div>`;
+      };
+      // 평가용 예약: 실제로 예약되지는 않고 '예약 완료' 알림만 띄운다.
+      const reserveBtn = el.querySelector("[data-reserve]");
+      reserveBtn.onclick = () => {
+        if (reserveBtn.dataset.done) return;
+        const d = drinkById[sel.drinkId];
+        const pour = groups[sel.drinkId].find((p) => p.ml === sel.ml);
+        const pop = document.createElement("div");
+        pop.className = "modal";
+        pop.innerHTML = `<div class="modal-card" role="alertdialog" aria-modal="true" aria-labelledby="rsv-t">
+          <span class="ok">${I.check}</span>
+          <h2 id="rsv-t" class="h2">예약 완료!</h2>
+          <p class="sub" style="margin-top:8px">${esc(b.name)} · ${esc(shortName(d))} ${sel.ml}mL${pour ? ` · ${won(pour.price)}` : ""}<br>오늘 ${esc(b.hours.split("~")[0])} 이후 방문하면 바로 준비해 드려요.</p>
+          <p style="margin-top:10px;font-size:12px;color:var(--muted)">평가용 화면이라 실제 예약은 되지 않아요</p>
+          <button class="btn btn-primary" data-ok style="margin-top:16px">확인</button>
+        </div>`;
+        el.append(pop);
+        buzz(12);
+        const ok = pop.querySelector("[data-ok]");
+        ok.focus();
+        ok.onclick = () => pop.remove();
+        pop.addEventListener("click", (e) => { if (e.target === pop) pop.remove(); });
+        reserveBtn.dataset.done = "1";
+        reserveBtn.textContent = "예약됨 ✓";
+        reserveBtn.setAttribute("aria-disabled", "true");
+        state.reservations = [...(state.reservations || []), { barId: b.id, drinkId: sel.drinkId, ml: sel.ml, at: Date.now() }];
+        save();
       };
       el.querySelector("[data-go]").onclick = (e) => {
         if (!going) {
