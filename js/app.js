@@ -1,8 +1,8 @@
-import { state, save, reset } from "./store.js?v=11151134";
-import { Q1, Q2, Q3, prefsFromAnswers, rank, nudge, tasteType, typeBlurb, typeBars, explain } from "./reco.js?v=11151134";
-import { createNav, swallowClick } from "./nav.js?v=11151134";
-import { buzz, burst } from "./fx.js?v=11151134";
-import { C, logoSVG, pourLogo, glyph, drinkArt, icon, stepGlass, reduceMotion, FOS } from "./brand.js?v=11151134";
+import { state, save, reset } from "./store.js?v=11151140";
+import { Q1, Q2, Q3, prefsFromAnswers, rank, nudge, tasteType, typeBlurb, typeBars, explain } from "./reco.js?v=11151140";
+import { createNav, swallowClick } from "./nav.js?v=11151140";
+import { buzz, burst } from "./fx.js?v=11151140";
+import { C, logoSVG, pourLogo, glyph, drinkArt, icon, stepGlass, reduceMotion, FOS } from "./brand.js?v=11151140";
 
 // 화면 모습과 흐름은 안드로이드 앱(design/ui-refresh)과 같게 맞췄다.
 // 웹에서만 정한 것: 예약하기(평가용 완료 알림), 후기, 내 기록, 아래 탭 막대.
@@ -12,7 +12,7 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "
 const won = (n) => n.toLocaleString("ko-KR") + "원";
 
 /* ---------- 데이터 ---------- */
-const load = (f) => fetch(`data/${f}?v=11151134`).then((r) => r.json());
+const load = (f) => fetch(`data/${f}?v=11151140`).then((r) => r.json());
 const [DRINKS, BARS, CHIPS, SAMPLE_REVIEWS] = await Promise.all(
   ["drinks.json", "bars.json", "chips.json", "reviews.json"].map(load));
 const drinkById = Object.fromEntries(DRINKS.map((d) => [d.id, d]));
@@ -199,9 +199,7 @@ function start() {
       <div class="sp"></div>
       <div class="reveal late"><div class="actions">
         <a class="btn btn-p" href="#/q/1" data-startq>내 취향 찾기</a>
-        <p class="t-bs c-v">질문 3개 · 약 30초</p>
         <button class="btn-t" data-sample>샘플 추천 먼저 둘러보기</button>
-        <p class="t-bs c-v">평가용 예시 데이터로 동작해요</p>
       </div></div>
     </section>`,
     mount(el) {
