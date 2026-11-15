@@ -60,3 +60,7 @@ js/store.js    저장
 data/          앱이 읽는 JSON, source/ 에 원본 엑셀
 tools/         엑셀 → JSON 변환 스크립트
 ```
+
+## 배포할 때
+
+`python3 tools/bump_version.py`를 실행한 뒤 커밋하고 main에 push하세요. 파일 주소에 버전 번호가 붙어서 휴대폰에서 새로고침했을 때 예전 화면이 남지 않습니다.

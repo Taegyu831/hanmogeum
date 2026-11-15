@@ -1,8 +1,8 @@
-import { state, save, reset } from "./store.js";
-import { Q1, Q2, Q3, AXES, AXIS_LABEL, prefsFromAnswers, rank, nudge, tasteType, typeBlurb, typeBars, explain } from "./reco.js";
-import { bottle, drinkColor, shortName } from "./art.js";
-import { createNav, swallowClick, EASE } from "./nav.js";
-import { buzz, pop, burst } from "./fx.js";
+import { state, save, reset } from "./store.js?v=11151036";
+import { Q1, Q2, Q3, AXES, AXIS_LABEL, prefsFromAnswers, rank, nudge, tasteType, typeBlurb, typeBars, explain } from "./reco.js?v=11151036";
+import { bottle, drinkColor, shortName } from "./art.js?v=11151036";
+import { createNav, swallowClick, EASE } from "./nav.js?v=11151036";
+import { buzz, pop, burst } from "./fx.js?v=11151036";
 
 const app = document.getElementById("app");
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -10,7 +10,7 @@ const typeName = () => (state.answers.q1.length ? tasteType(state.prefs) : "골�
 const won = (n) => n.toLocaleString("ko-KR") + "원";
 
 /* ---------- data ---------- */
-const load = (f) => fetch(`data/${f}`).then((r) => r.json());
+const load = (f) => fetch(`data/${f}?v=11151036`).then((r) => r.json());
 const [DRINKS, BARS, CHIPS, SAMPLE_REVIEWS] = await Promise.all(
   ["drinks.json", "bars.json", "chips.json", "reviews.json"].map(load));
 const drinkById = Object.fromEntries(DRINKS.map((d) => [d.id, d]));
@@ -96,9 +96,32 @@ const go = (hash, opts) => nav.go(hash, opts);
 const back = (fallback) => nav.back(fallback);
 const render = () => nav.refresh();
 
+// 끌려요, 패스, 후기를 순서대로 기록해 두고 처음 취향에서 다시 계산한다.
+// 그래서 끌려요나 패스를 취소하면 그 반응이 없었던 것처럼 취향이 돌아간다.
+function recompute() {
+  let p = state.basePrefs || state.prefs;
+  for (const e of state.fb) { const d = drinkById[e.id]; if (d) p = nudge(p, d, e.v); }
+  state.prefs = p;
+}
+// v: true 끌려요, false 패스, null 반응 없음. 후기로 남긴 반응은 건드리지 않는다.
+function setFeedback(id, v, src = "feed") {
+  if (!state.basePrefs) state.basePrefs = state.prefs || prefsFromAnswers(state.answers.q1);
+  state.fb = state.fb.filter((e) => !(e.id === id && e.src !== "review"));
+  state.liked = state.liked.filter((x) => x !== id);
+  state.passed = state.passed.filter((x) => x !== id);
+  if (v !== null) {
+    state.fb.push({ id, v, src });
+    (v ? state.liked : state.passed).push(id);
+  }
+  recompute();
+  save();
+}
+const LIKED = "♥";
+
 function ensureRecs() {
   if (!state.prefs) {
-    state.prefs = prefsFromAnswers(state.answers.q1);
+    state.prefs = state.basePrefs = prefsFromAnswers(state.answers.q1);
+    state.fb = [];
     state.order = rank(DRINKS, state.prefs, state.answers.q2, state.answers.q3);
     save();
   }
@@ -257,12 +280,24 @@ function question({ parts }) {
 
 function result() {
   const a = state.answers;
-  state.prefs = prefsFromAnswers(a.q1);
+  state.basePrefs = prefsFromAnswers(a.q1);
+  // 처음 추천 세 잔. 여기서 누른 하트는 피드까지 이어진다.
+  const first = rank(DRINKS, state.basePrefs, a.q2, a.q3).slice(0, 3);
+  state.fb = state.fb.filter((e) => e.src === "result" && first.includes(e.id));
+  state.passed = [];
+  recompute();
   state.order = rank(DRINKS, state.prefs, a.q2, a.q3);
   state.feedIndex = 0;
-  state.passed = [];
   save();
   dropFeed();
+  const sip = (id) => {
+    const d = drinkById[id];
+    const on = state.liked.includes(id);
+    return `<button class="sip" data-sip="${id}" aria-pressed="${on}" aria-label="${esc(shortName(d))} 끌려요">
+      <span class="sw" style="background:${drinkColor(d)}">${bottle(d, { title: false })}</span>
+      <b>${esc(shortName(d))}</b><small>${esc(d.category)}</small>
+      <span class="sip-heart" aria-hidden="true">${I.heart}</span></button>`;
+  };
   const type = typeName();
   const words = type.split(" ");
   const title = words.length > 2 ? `${words.slice(0, -1).join(" ")}<br>${words.at(-1)}` : type;
@@ -276,20 +311,41 @@ function result() {
           <p class="sub">${typeBlurb(state.prefs)}</p>
           <div class="bars">${bars(state.prefs)}</div>
         </div>
+        <p class="section-title">나에게 맞는 첫 한 모금</p>
+        <p class="sub">끌리는 잔을 눌러 두면 피드에서도 하트가 켜져 있어요.</p>
+        <div class="first-sips">${first.map(sip).join("")}</div>
         <p class="sub" style="margin-top:12px">처음 몇 개를 보는 동안 취향은 계속 다듬어져요.</p>
       </div>
-      <div class="bottom"><a class="btn btn-primary" href="#/feed">첫 추천 5개 보러 가기</a></div>
+      <div class="bottom"><a class="btn btn-primary" href="#/feed" data-start>첫 추천 5개 보러 가기</a></div>
     </section>`,
+    mount(el) {
+      el.querySelectorAll("[data-sip]").forEach((b) => (b.onclick = () => {
+        const id = b.dataset.sip;
+        const on = !state.liked.includes(id);
+        setFeedback(id, on ? true : null, "result");
+        b.setAttribute("aria-pressed", on);
+        pop(b, on ? 1.06 : 0.96);
+        if (on) { burst(b.querySelector(".sip-heart"), app); buzz(10); }
+      }));
+      // 하트를 반영한 취향으로 피드 순서를 다시 정한다.
+      el.querySelector("[data-start]").onclick = () => {
+        state.order = rank(DRINKS, state.prefs, a.q2, a.q3);
+        save();
+        dropFeed();
+      };
+    },
   };
 }
 
 /* ---------- B. feed and card ---------- */
 function reelHTML(d, i, total) {
   const liked = state.liked.includes(d.id);
+  const passed = state.passed.includes(d.id);
   const label = i < 5 ? `오늘의 탐색 ${i + 1}/5` : `더 둘러보기 ${i + 1}/${total}`;
   const showHint = !state.hintSeen && i === 0;
   return `<article class="reel" data-id="${d.id}" data-i="${i}" style="background:${drinkColor(d)}">
-    <div class="reel-head"><span class="pill glass">${label}</span><a class="pill glass" href="#/log" data-type>${esc(typeName())}</a></div>
+    <div class="reel-head"><span class="pill glass">${label}</span>
+      <span class="reel-head-r"><button class="pill glass liked-count" data-liked aria-label="끌린 술 목록 보기">${I.heart.replace("<svg", '<svg width="14" height="14"')}<span data-n>${state.liked.length}</span></button><a class="pill glass" href="#/log" data-type>${esc(typeName())}</a></span></div>
     <div class="reel-visual"><span class="halo"></span>${bottle(d)}</div>
     <button class="peek-edge" data-open aria-label="맛 카드 보기">${I.back}</button>
     ${showHint ? `<span class="hint-swipe" aria-hidden="true">왼쪽으로 밀어보세요</span>` : ""}
@@ -306,7 +362,7 @@ function reelHTML(d, i, total) {
       </div>
       <div class="reel-actions">
         <button data-like aria-pressed="${liked}"><span class="circle">${I.heart}</span>끌려요</button>
-        <button data-pass><span class="circle">${I.x}</span>패스</button>
+        <button data-pass aria-pressed="${passed}"><span class="circle">${I.x}</span>패스</button>
       </div>
     </div>
     <button class="pill glass peek-btn" data-open>밀어서 맛 카드 보기 ${I.left.replace("<svg", '<svg width="14" height="14"')}</button>
@@ -332,9 +388,10 @@ function feed() {
     // Runs when the kept feed comes back on stage.
     show(el) {
       el.querySelectorAll(".reel[data-id]").forEach((r) => {
-        const b = r.querySelector("[data-like]");
-        b.setAttribute("aria-pressed", state.liked.includes(r.dataset.id));
+        r.querySelector("[data-like]").setAttribute("aria-pressed", state.liked.includes(r.dataset.id));
+        r.querySelector("[data-pass]").setAttribute("aria-pressed", state.passed.includes(r.dataset.id));
       });
+      el.querySelectorAll("[data-n]").forEach((n) => (n.textContent = state.liked.length));
       el.querySelectorAll("[data-type]").forEach((a) => (a.textContent = typeName()));
       if (state.hintSeen) el.querySelectorAll(".hint-swipe").forEach((h) => h.remove());
     },
@@ -378,31 +435,40 @@ function feed() {
           const id = r.dataset.id;
           const i = Number(r.dataset.i);
           const seen = () => { state.hintSeen = true; state.feedIndex = i; save(); r.querySelector(".hint-swipe")?.remove(); };
+          r.querySelector("[data-liked]").onclick = () => openLiked();
           r.querySelectorAll("[data-open]").forEach((b) => (b.onclick = () => { seen(); go(`#/card/${id}`); }));
           nav.drag(r, { dir: "forward", target: () => `#/card/${id}`, onCommit: () => { seen(); buzz(6); } });
 
           r.querySelector("[data-like]").onclick = (e) => {
             const b = e.currentTarget;
             const circle = b.querySelector(".circle");
-            if (state.liked.includes(id)) {
-              state.liked = state.liked.filter((x) => x !== id);
-              b.setAttribute("aria-pressed", false);
+            const on = !state.liked.includes(id);
+            setFeedback(id, on ? true : null);
+            b.setAttribute("aria-pressed", on);
+            r.querySelector("[data-pass]").setAttribute("aria-pressed", false);
+            if (on) {
+              pop(circle);
+              burst(circle, app);
+              buzz(12);
+              toast("끌린 맛을 다음 추천에 반영할게요");
+            } else {
               pop(circle, 0.85);
-              save();
-              return;
+              toast("끌려요를 취소했어요");
             }
-            state.liked.push(id);
-            state.passed = state.passed.filter((x) => x !== id);
-            state.prefs = nudge(state.prefs, drinkById[id], true);
-            b.setAttribute("aria-pressed", true);
-            pop(circle);
-            burst(circle, app);
-            buzz(12);
-            toast("끌린 맛을 다음 추천에 반영할게요");
+            updateCount();
             rerankAfter(i);
           };
 
           r.querySelector("[data-pass]").onclick = (e) => {
+            const pb = e.currentTarget;
+            if (state.passed.includes(id)) {
+              setFeedback(id, null);
+              pb.setAttribute("aria-pressed", false);
+              pop(pb.querySelector(".circle"), 0.85);
+              toast("패스를 취소했어요");
+              rerankAfter(i);
+              return;
+            }
             buzz(8);
             e.currentTarget.querySelector(".circle").animate(
               [{ transform: "rotate(0)" }, { transform: "rotate(90deg) scale(.9)" }, { transform: "rotate(90deg)" }],
@@ -412,10 +478,11 @@ function feed() {
             art.animate(
               [{ transform: "none", opacity: 1 }, { transform: "translate(-80px, 30px) rotate(-18deg) scale(.85)", opacity: 0 }],
               { duration: 280, easing: "cubic-bezier(.5,0,.75,0)" });
-            if (!state.passed.includes(id)) state.passed.push(id);
-            state.liked = state.liked.filter((x) => x !== id);
-            state.prefs = nudge(state.prefs, drinkById[id], false);
-            toast("비슷한 맛은 뒤로 미룰게요");
+            setFeedback(id, false);
+            pb.setAttribute("aria-pressed", true);
+            r.querySelector("[data-like]").setAttribute("aria-pressed", false);
+            updateCount();
+            toast("비슷한 맛은 뒤로 미룰게요. 다시 누르면 취소돼요");
             rerankAfter(i);
             const moveOn = () => {
               art.style.opacity = 0;
@@ -428,6 +495,55 @@ function feed() {
         });
       }
       bind(f);
+
+      function updateCount() {
+        f.querySelectorAll("[data-n]").forEach((n) => (n.textContent = state.liked.length));
+      }
+
+      // 끌린 술 목록. 여기서도 하트를 끄고 켤 수 있고, 근처 바로 바로 넘어갈 수 있다.
+      function openLiked() {
+        const ids = [...state.liked];
+        const changed = new Set();
+        const row = (id) => {
+          const d = drinkById[id];
+          return `<div class="mini lrow"><a class="lrow-link" href="#/card/${id}">
+            <span class="sw" style="background:${drinkColor(d)}">${bottle(d, { title: false })}</span>
+            <span><b>${esc(shortName(d))}</b><small>${esc(d.oneLine)}</small></span></a>
+            <button class="icon-btn lrow-heart" data-un="${id}" aria-pressed="true" aria-label="${esc(shortName(d))} 끌려요 취소">${I.heart}</button></div>`;
+        };
+        const sh = document.createElement("div");
+        sh.className = "modal bottom-sheet";
+        sh.innerHTML = `<div class="lsheet" role="dialog" aria-modal="true" aria-labelledby="ls-t">
+          <div class="grip"></div>
+          <h2 class="h2" id="ls-t">끌린 술 ${ids.length}</h2>
+          ${ids.length ? `<div class="lsheet-list">${ids.map(row).join("")}</div>
+            <a class="btn btn-primary" href="#/nearby" data-near style="margin-top:14px">끌린 술 맛보러 가기</a>`
+          : `<p class="empty" style="margin:18px 0">아직 끌린 술이 없어요.<br>마음에 드는 잔에서 하트를 눌러 보세요.</p>`}
+        </div>`;
+        el.append(sh);
+        buzz(6);
+        const close = () => {
+          sh.remove();
+          if (!changed.size) return;
+          el.querySelectorAll(".reel[data-id]").forEach((r) => {
+            r.querySelector("[data-like]").setAttribute("aria-pressed", state.liked.includes(r.dataset.id));
+          });
+          updateCount();
+          rerankAfter(state.feedIndex);
+        };
+        sh.addEventListener("click", (e) => { if (e.target === sh) close(); });
+        sh.querySelectorAll(".lrow-link").forEach((a) => (a.onclick = () => sh.remove()));
+        sh.querySelector("[data-near]")?.addEventListener("click", () => { nearbyCat = LIKED; sh.remove(); });
+        sh.querySelectorAll("[data-un]").forEach((b) => (b.onclick = () => {
+          const id = b.dataset.un;
+          const on = !state.liked.includes(id);
+          setFeedback(id, on ? true : null);
+          changed.add(id);
+          b.setAttribute("aria-pressed", on);
+          pop(b, on ? 1.2 : 0.85);
+          sh.querySelector("#ls-t").textContent = `끌린 술 ${state.liked.length}`;
+        }));
+      }
 
       // First visit: briefly show that the taste card sits on the right.
       if (!state.hintSeen && !peeked) {
@@ -578,16 +694,12 @@ function card({ parts }) {
       const likeBtn = el.querySelector("[data-like]");
       likeBtn.onclick = () => {
         const on = !state.liked.includes(d.id);
+        setFeedback(d.id, on ? true : null);
         if (on) {
-          state.liked.push(d.id);
-          state.prefs = nudge(state.prefs, d, true);
           toast("끌린 맛을 다음 추천에 반영할게요");
           burst(likeBtn, app);
           buzz(12);
-        } else {
-          state.liked = state.liked.filter((x) => x !== d.id);
         }
-        save();
         likeBtn.setAttribute("aria-pressed", on);
         likeBtn.style.color = on ? "var(--ruby)" : "inherit";
         likeBtn.innerHTML = on ? I.heart.replace('fill="none"', 'fill="currentColor"') : I.heart;
@@ -607,9 +719,10 @@ let sheetSnap = "mid";
 
 function nearby({ parts }) {
   const d = parts[1] ? drinkById[parts[1]] : null;
-  const cat = d ? null : nearbyCat;
+  const cat = d ? null : nearbyCat === LIKED && !state.liked.length ? null : nearbyCat;
   const passes = (p) => (!filters.small || p.ml <= 30) && (!filters.fresh || p.openedDays <= 3) && (!filters.open || openNow(p.bar.hours))
-    && (!cat || drinkById[p.drinkId]?.category === cat);
+    && (!cat || (cat === LIKED ? state.liked.includes(p.drinkId) : drinkById[p.drinkId]?.category === cat));
+  const catName = cat === LIKED ? "끌린 술" : cat;
   const list = BARS.map((b) => {
     const pours = b.pours.map((p) => ({ ...p, bar: b })).filter((p) => (!d || p.drinkId === d.id) && passes(p));
     return { b, pours };
@@ -637,17 +750,18 @@ function nearby({ parts }) {
     return `<button class="bar-item" data-bar="${b.id}">
       <span class="sw" style="background:${BAR_COLOR[b.id]}"></span>
       <span><b>${esc(b.name)}</b><small>${esc(b.area.split(" ").at(-1))} · ${esc(b.distance)}</small></span>
-      <span class="price">${d ? `${p.ml}mL ${won(p.price)}` : cat ? `${esc(cat)} ${new Set(pours.map((x) => x.drinkId)).size}종` : `${pours.length}종`}<small>${d ? `개봉 ${p.openedDays}일째` : `${won(p.price)}부터`}</small></span>
+      <span class="price">${d ? `${p.ml}mL ${won(p.price)}` : cat ? `${esc(catName)} ${new Set(pours.map((x) => x.drinkId)).size}종` : `${pours.length}종`}<small>${d ? `개봉 ${p.openedDays}일째` : `${won(p.price)}부터`}</small></span>
     </button>`;
   }).join("");
 
   return {
     html: `<section class="screen nearby-screen">
       <div class="map">${map}${pins}<span class="me" data-y="82" aria-label="내 위치"></span>
-        <div class="search">${I.search}<span>내 주변 · ${d ? `${esc(shortName(d))} 한 잔` : cat ? `${esc(cat)} 한 잔` : "한 잔 할 수 있는 곳"}</span>
+        <div class="search">${I.search}<span>내 주변 · ${d ? `${esc(shortName(d))} 한 잔` : cat ? `${esc(catName)} 한 잔` : "한 잔 할 수 있는 곳"}</span>
           ${d ? `<a href="#/nearby" style="margin-left:auto;color:var(--muted)" aria-label="술 선택 해제">${I.x.replace("<svg", '<svg width="16" height="16"')}</a>` : ""}</div>
         <div class="filters cats" role="radiogroup" aria-label="주종">
           <button class="chip" data-cat="" role="radio" aria-checked="${!d && !cat}">전체</button>
+          ${state.liked.length ? `<button class="chip" data-cat="${LIKED}" role="radio" aria-checked="${cat === LIKED}">♥ 끌린 술</button>` : ""}
           ${NEARBY_CATS().map((c) => `<button class="chip" data-cat="${esc(c)}" role="radio" aria-checked="${cat === c}">${esc(c)}</button>`).join("")}
         </div>
         <div class="filters">
@@ -875,8 +989,12 @@ function review({ parts, q }) {
       submit.onclick = () => {
         form.text = el.querySelector("textarea").value.trim();
         state.reviews.unshift({ drinkId: d.id, barId: b?.id || null, ml: ml ? Number(ml) : null, ...form, date: new Date().toISOString() });
-        if (form.reaction === "딱 내 취향") state.prefs = nudge(state.prefs || prefsFromAnswers([]), d, true);
-        if (form.reaction === "내 취향 아님") state.prefs = nudge(state.prefs || prefsFromAnswers([]), d, false);
+        const v = form.reaction === "딱 내 취향" ? true : form.reaction === "내 취향 아님" ? false : null;
+        if (v !== null) {
+          if (!state.basePrefs) state.basePrefs = state.prefs || prefsFromAnswers(state.answers.q1);
+          state.fb.push({ id: d.id, v, src: "review" });
+          recompute();
+        }
         save();
         toast("후기가 맛 카드에 올라갔어요");
         go(`#/card/${d.id}`, { replace: true, dir: "back" });

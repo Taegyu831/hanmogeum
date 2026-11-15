@@ -4,6 +4,8 @@ const KEY = "hanmogeum.v1";
 const fresh = () => ({
   answers: { q1: [], q2: [], q3: null },
   prefs: null,
+  basePrefs: null,
+  fb: [],
   order: [],
   liked: [],
   passed: [],
