@@ -192,6 +192,10 @@ textarea, input { -webkit-user-select: text; user-select: text; }
 .sel[aria-checked="true"] .ring { border-color: #fff; }
 .sel[aria-checked="true"] .ring > i { background: #fff; }
 
+/* ---------- 유형 둘러보기 ---------- */
+.type-row { width: 100%; display: flex; align-items: center; gap: 16px; padding: 16px 0; border-bottom: 1px solid var(--divider); text-align: left; }
+.type-row .arts { gap: 2px; width: 70px; justify-content: center; }
+
 /* ---------- 결과 ---------- */
 .analyzing { align-items: center; justify-content: center; gap: 24px; }
 .fade-in { animation: fadeIn .36s ease-out both; }

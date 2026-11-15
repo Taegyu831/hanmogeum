@@ -1,8 +1,8 @@
-import { state, save, reset } from "./store.js?v=11151140";
-import { Q1, Q2, Q3, prefsFromAnswers, rank, nudge, tasteType, typeBlurb, typeBars, explain } from "./reco.js?v=11151140";
-import { createNav, swallowClick } from "./nav.js?v=11151140";
-import { buzz, burst } from "./fx.js?v=11151140";
-import { C, logoSVG, pourLogo, glyph, drinkArt, icon, stepGlass, reduceMotion, FOS } from "./brand.js?v=11151140";
+import { state, save, reset } from "./store.js?v=11151144";
+import { AXES, Q1, Q2, Q3, prefsFromAnswers, rank, nudge, tasteType, typeBlurb, typeBars, explain } from "./reco.js?v=11151144";
+import { createNav, swallowClick } from "./nav.js?v=11151144";
+import { buzz, burst } from "./fx.js?v=11151144";
+import { C, logoSVG, pourLogo, glyph, drinkArt, icon, stepGlass, reduceMotion, FOS } from "./brand.js?v=11151144";
 
 // 화면 모습과 흐름은 안드로이드 앱(design/ui-refresh)과 같게 맞췄다.
 // 웹에서만 정한 것: 예약하기(평가용 완료 알림), 후기, 내 기록, 아래 탭 막대.
@@ -12,7 +12,7 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "
 const won = (n) => n.toLocaleString("ko-KR") + "원";
 
 /* ---------- 데이터 ---------- */
-const load = (f) => fetch(`data/${f}?v=11151140`).then((r) => r.json());
+const load = (f) => fetch(`data/${f}?v=11151144`).then((r) => r.json());
 const [DRINKS, BARS, CHIPS, SAMPLE_REVIEWS] = await Promise.all(
   ["drinks.json", "bars.json", "chips.json", "reviews.json"].map(load));
 const drinkById = Object.fromEntries(DRINKS.map((d) => [d.id, d]));
@@ -68,10 +68,31 @@ const ABV_NOTE = {
 const barsFor = (id) => BARS.filter((b) => b.pours.some((p) => p.drinkId === id));
 const CATEGORIES = [...new Set(BARS.flatMap((b) => catsOf(b)))];
 
+/* ---------- 취향 유형 둘러보기 ---------- */
+// 질문 없이 고를 수 있는 대표 유형 12개. 앞의 8개는 한 가지 맛이 뚜렷한 유형, 뒤의 4개는 섞인 유형.
+const TYPES = [
+  { id: "sweet", name: "단맛파", line: "디저트처럼 달콤한 술이 편해요", prefs: { sweet: 3, fruit: 1 } },
+  { id: "sour", name: "상큼파", line: "새콤한 과일 맛에 먼저 손이 가요", prefs: { sour: 2, fruit: 3 } },
+  { id: "fizz", name: "탄산파", line: "톡 쏘는 청량감이 제일 중요해요", prefs: { fizz: 3, sweet: 1 } },
+  { id: "flower", name: "꽃향파", line: "한 모금에 꽃 향이 퍼지는 술이 좋아요", prefs: { flower: 3, fruit: 1 } },
+  { id: "grain", name: "고소파", line: "구운 곡물처럼 고소한 맛이 좋아요", prefs: { grain: 3, body: 1 } },
+  { id: "bitter", name: "쌉쌀파", line: "커피처럼 쌉쌀하고 나무 향이 은은한 쪽", prefs: { bitter: 2, wood: 2 } },
+  { id: "body", name: "진한맛파", line: "묵직하고 존재감 있는 한 잔", prefs: { body: 3, alc: 2 } },
+  { id: "smoke", name: "스모키파", line: "연기와 허브 향, 개성 강한 술", prefs: { smoke: 3, herb: 2 } },
+  { id: "sweetfizz", name: "달콤 톡톡파", line: "달콤한데 톡 쏘기까지 하면 최고", mixed: true, prefs: { sweet: 2, fizz: 2, fruit: 1 } },
+  { id: "fruitflower", name: "상큼 향긋파", line: "과일 향과 꽃 향이 함께 나는 가벼운 술", mixed: true, prefs: { fruit: 2, flower: 2, sour: 1 } },
+  { id: "grainwood", name: "고소 은은파", line: "고소함 뒤에 나무 향이 은은하게 남는 술", mixed: true, prefs: { grain: 2, wood: 2, body: 1 } },
+  { id: "all", name: "골고루 탐험파", line: "아직 모르겠다면 여러 종류부터 맛보기", mixed: true, prefs: { sweet: 1, sour: 1, bitter: 1, fizz: 1, body: 1, fruit: 1, flower: 1, grain: 1, wood: 1, herb: 1 } },
+];
+const typeById = (id) => TYPES.find((t) => t.id === id);
+const typePrefs = (t) => Object.fromEntries(AXES.map((a) => [a, t.prefs[a] || 0]));
+const presetType = () => (state.preset ? typeById(state.preset) : null);
+const basePrefsNow = () => (presetType() ? typePrefs(presetType()) : prefsFromAnswers(state.answers.q1));
+
 /* ---------- 상태 ---------- */
 function ensureRecs() {
   if (!state.prefs) {
-    state.prefs = state.basePrefs = prefsFromAnswers(state.answers.q1);
+    state.prefs = state.basePrefs = basePrefsNow();
     state.fb = [];
     state.order = rank(DRINKS, state.prefs, state.answers.q2, state.answers.q3);
     save();
@@ -79,8 +100,8 @@ function ensureRecs() {
   if (!state.order.length) state.order = rank(DRINKS, state.prefs, state.answers.q2, state.answers.q3);
 }
 // 결과 화면 순위 (처음 답 기준, 반응으로 바뀌지 않음)
-const resultRank = () => rank(DRINKS, state.basePrefs || prefsFromAnswers(state.answers.q1), state.answers.q2, state.answers.q3);
-const typeName = () => (state.answers.q1.length ? tasteType(state.prefs || prefsFromAnswers(state.answers.q1)) : "골고루 탐험파");
+const resultRank = () => rank(DRINKS, state.basePrefs || basePrefsNow(), state.answers.q2, state.answers.q3);
+const typeName = () => presetType()?.name || (state.answers.q1.length ? tasteType(state.prefs || prefsFromAnswers(state.answers.q1)) : "골고루 탐험파");
 const reasonText = (d) => explain(d, state.answers).why.join(" ");
 const cautionText = (d) => explain(d, state.answers).risk[0] || "";
 
@@ -125,7 +146,8 @@ function parentOf(hash) {
     case "try": return `#/bar/${parts[1]}`;
     case "review": return `#/card/${parts[1]}`;
     case "q": return Number(parts[1]) > 1 ? `#/q/${Number(parts[1]) - 1}` : "#/";
-    case "result": return "#/q/3";
+    case "result": return state.preset ? "#/types" : "#/q/3";
+    case "types": return "#/";
     default: return null;
   }
 }
@@ -199,7 +221,7 @@ function start() {
       <div class="sp"></div>
       <div class="reveal late"><div class="actions">
         <a class="btn btn-p" href="#/q/1" data-startq>내 취향 찾기</a>
-        <button class="btn-t" data-sample>샘플 추천 먼저 둘러보기</button>
+        <a class="btn-t" href="#/types">어떤 유형이 있는지 둘러보기</a>
       </div></div>
     </section>`,
     mount(el) {
@@ -207,15 +229,9 @@ function start() {
       el.querySelector("[data-startq]").addEventListener("click", () => {
         state.answers = { q1: [], q2: [], q3: null };
         state.skipped = false;
+        state.preset = null;
         save();
       });
-      el.querySelector("[data-sample]").onclick = () => {
-        state.answers = { q1: [], q2: [], q3: null };
-        state.skipped = true;
-        save();
-        justAnswered = true;
-        go("#/result");
-      };
     },
   };
 }
@@ -281,6 +297,7 @@ function question({ parts }) {
           else a.q2 = a.q2.includes(id) ? a.q2.filter((x) => x !== id) : [...a.q2.filter((x) => x !== "none"), id];
         } else a.q3 = id;
         state.skipped = false;
+        state.preset = null;
         save();
         el.querySelectorAll("[data-id]").forEach((x) => {
           const v = x.dataset.id;
@@ -302,10 +319,51 @@ function question({ parts }) {
   };
 }
 
+/* ---------- A. 유형 둘러보기 ---------- */
+function types() {
+  const row = (t) => {
+    const picks = rank(DRINKS, typePrefs(t)).slice(0, 3).map((id) => drinkById[id]);
+    return `<button class="type-row press" data-type="${t.id}" aria-label="${esc(t.name)}. ${esc(t.line)}. 대표 술 ${picks.map((d) => esc(d.name)).join(", ")}. 이 유형으로 추천 보기">
+      <span class="arts" aria-hidden="true">${picks.map((d) => drinkArt(d, 22, 52)).join("")}</span>
+      <span class="grow stack" style="gap:2px"><span class="t-tm">${esc(t.name)}</span><span class="t-bm c-v">${esc(t.line)}</span>
+        <span class="t-bs c-p">${picks.map((d) => esc(d.name.replace(/\s*\(.*\)/, ""))).join(" · ")}</span></span>
+      <span class="c-v" aria-hidden="true">${icon.chevronRight(18, 18)}</span></button>`;
+  };
+  return {
+    html: `<section class="screen">
+      ${topbar("취향 유형 둘러보기", { backLabel: "처음 화면으로" })}
+      <div class="scroll"><div class="pad" style="padding-top:8px;padding-bottom:32px">
+        <p class="t-bl c-v">질문 없이, 끌리는 유형을 골라 추천부터 볼 수 있어요.</p>
+        <h2 class="t-ll c-v" style="margin-top:28px">한 가지 맛이 뚜렷한 유형</h2>
+        <div>${TYPES.filter((t) => !t.mixed).map(row).join("")}</div>
+        <h2 class="t-ll c-v" style="margin-top:32px">여러 맛이 섞인 유형</h2>
+        <div>${TYPES.filter((t) => t.mixed).map(row).join("")}</div>
+        <a class="btn btn-p" href="#/q/1" data-startq style="margin-top:32px">질문으로 내 유형 찾기</a>
+      </div></div>
+    </section>`,
+    mount(el) {
+      bindBack(el);
+      el.querySelectorAll("[data-type]").forEach((b) => (b.onclick = () => {
+        state.answers = { q1: [], q2: [], q3: null };
+        state.preset = b.dataset.type;
+        state.skipped = false;
+        state.basePrefs = null;
+        save();
+        go("#/result");
+      }));
+      el.querySelector("[data-startq]").addEventListener("click", () => {
+        state.answers = { q1: [], q2: [], q3: null };
+        state.preset = null;
+        save();
+      });
+    },
+  };
+}
+
 /* ---------- A. 결과 ---------- */
 function result() {
   const a = state.answers;
-  state.basePrefs = prefsFromAnswers(a.q1);
+  state.basePrefs = basePrefsNow();
   const top5 = resultRank().slice(0, 5);
   // 결과 화면에서 누른 하트만 남기고(피드로 이어짐), 이전 피드 반응은 새 취향에서 다시 시작한다.
   state.fb = state.fb.filter((e) => e.src === "result" && top5.includes(e.id));
@@ -347,7 +405,7 @@ function result() {
   const content = `<div class="stack" style="flex:1;min-height:0" data-content>
     <div class="topbar"><button class="icon-btn" data-back aria-label="이전 질문으로">${icon.back()}</button><span class="grow"></span></div>
     <div class="scroll"><div class="pad" style="padding-top:8px;padding-bottom:32px">
-      <p class="t-ll c-p">${state.skipped ? "기본 탐색 유형" : "나의 취향 유형"}</p>
+      <p class="t-ll c-p">${presetType() ? "둘러보기로 고른 유형" : "나의 취향 유형"}</p>
       <h1 class="t-hl" style="font-size:34px;line-height:42px;margin-top:4px">${esc(typeName())}</h1>
       <p class="t-bl c-v" style="margin-top:8px">${esc(typeBlurb(base))}</p>
       <div class="card taste-bars" style="margin-top:24px">
@@ -404,7 +462,7 @@ function result() {
       dropFeed();
     });
     el.querySelector("[data-restart]").onclick = () => {
-      Object.assign(state, { answers: { q1: [], q2: [], q3: null }, prefs: null, basePrefs: null, fb: [], liked: [], passed: [], order: [], feedIndex: 0, skipped: false });
+      Object.assign(state, { answers: { q1: [], q2: [], q3: null }, prefs: null, basePrefs: null, fb: [], liked: [], passed: [], order: [], feedIndex: 0, skipped: false, preset: null });
       save();
       dropFeed();
       go("#/", { replace: true, dir: "back" });
@@ -1152,6 +1210,7 @@ function log() {
             <div class="row"><span class="t-bl" style="font-weight:500">${b.label}</span><span class="t-bm c-v">${b.pct}%</span></div>
             <div class="track"><div class="fill" style="width:${b.pct}%;background:${BAR_TONES[i % 4]}"></div></div></div>`).join("")}</div>
           <a class="btn btn-s" href="#/q/1">취향 다시 찾기</a>
+          <a class="btn-t" href="#/types" style="align-self:center">다른 유형 둘러보기</a>
         </div>
         <div><h2 class="t-tm" style="margin-bottom:8px">끌린 술 ${liked.length}</h2>
           ${liked.length ? liked.map((d) => mini(d, `“${d.oneLine}”`)).join("") : `<p class="t-bm c-v">피드에서 끌려요를 누르면 여기 모여요.</p>`}</div>
@@ -1171,5 +1230,5 @@ function log() {
   };
 }
 
-const ROUTES = { "": start, q: question, result, feed, card, nearby, bar, try: tasting, review, log };
+const ROUTES = { "": start, q: question, types, result, feed, card, nearby, bar, try: tasting, review, log };
 nav.start();
