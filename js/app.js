@@ -1,100 +1,88 @@
-import { state, save, reset } from "./store.js?v=11151036";
-import { Q1, Q2, Q3, AXES, AXIS_LABEL, prefsFromAnswers, rank, nudge, tasteType, typeBlurb, typeBars, explain } from "./reco.js?v=11151036";
-import { bottle, drinkColor, shortName } from "./art.js?v=11151036";
-import { createNav, swallowClick, EASE } from "./nav.js?v=11151036";
-import { buzz, pop, burst } from "./fx.js?v=11151036";
+import { state, save, reset } from "./store.js?v=11151112";
+import { Q1, Q2, Q3, prefsFromAnswers, rank, nudge, tasteType, typeBlurb, typeBars, explain } from "./reco.js?v=11151112";
+import { createNav, swallowClick } from "./nav.js?v=11151112";
+import { buzz, burst } from "./fx.js?v=11151112";
+import { C, logoSVG, pourLogo, glyph, drinkArt, icon, stepGlass, reduceMotion, FOS } from "./brand.js?v=11151112";
+
+// 화면 모습과 흐름은 안드로이드 앱(design/ui-refresh)과 같게 맞췄다.
+// 웹에서만 정한 것: 예약하기(평가용 완료 알림), 후기, 내 기록, 아래 탭 막대.
 
 const app = document.getElementById("app");
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-const typeName = () => (state.answers.q1.length ? tasteType(state.prefs) : "골고루 탐험파");
 const won = (n) => n.toLocaleString("ko-KR") + "원";
 
-/* ---------- data ---------- */
-const load = (f) => fetch(`data/${f}?v=11151036`).then((r) => r.json());
+/* ---------- 데이터 ---------- */
+const load = (f) => fetch(`data/${f}?v=11151112`).then((r) => r.json());
 const [DRINKS, BARS, CHIPS, SAMPLE_REVIEWS] = await Promise.all(
   ["drinks.json", "bars.json", "chips.json", "reviews.json"].map(load));
 const drinkById = Object.fromEntries(DRINKS.map((d) => [d.id, d]));
 const barById = Object.fromEntries(BARS.map((b) => [b.id, b]));
-const BAR_COLOR = { B1: "var(--c-grain)", B2: "var(--c-flower)", B3: "var(--c-fruit)", B4: "var(--c-wood)" };
-const AXIS_COLOR = {
-  sweet: "#F4A08A", sour: "#F0B44C", bitter: "#A07A5A", fizz: "#8FC3E6", body: "#C08A5A", alc: "#8C1D2B",
-  fruit: "#F49A84", flower: "#C7B0EA", grain: "#EBCB55", wood: "#D9A86C", smoke: "#ADA296", herb: "#8CCB66",
-};
 
-/* ---------- icons ---------- */
-const I = {
-  check: `<svg viewBox="0 0 24 24" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>`,
-  heart: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20s-7.5-4.6-9.3-9.2C1.5 7.6 3.6 4.5 7 4.5c2 0 3.4 1.1 5 3 1.6-1.9 3-3 5-3 3.4 0 5.5 3.1 4.3 6.3C19.5 15.4 12 20 12 20z"/></svg>`,
-  x: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>`,
-  back: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>`,
-  left: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5m6-6l-6 6 6 6"/></svg>`,
-  search: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4 4"/></svg>`,
-  compass: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z" fill="currentColor"/></svg>`,
-  pin: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>`,
-  bookmark: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M6 4h12v17l-6-4-6 4z"/></svg>`,
-  flip: `<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 12a8 8 0 0 1 14-5.3M20 12a8 8 0 0 1-14 5.3M18 3v4h-4M6 21v-4h4"/></svg>`,
-  mapPin: (c) => `<svg viewBox="0 0 28 34"><path d="M14 33S2 21.5 2 13a12 12 0 0 1 24 0c0 8.5-12 20-12 20z" fill="${c}" stroke="#5C3317" stroke-width="2"/><circle cx="14" cy="13" r="4.5" fill="#FFFDF8"/></svg>`,
+// 질문 문구는 앱과 같게.
+const Q2_EFFECT = {
+  bitter: "쓴맛이 강한 술은 추천 순위를 낮춰요",
+  alcsmell: "알코올 느낌이 덜 도드라지는 술을 먼저 보여줘요",
+  full: "탄산이 과하게 강한 술은 순위를 조정해요",
+  same: "상위 추천에 다양한 주종이 고르게 섞이도록 구성해요",
+  hangover: "도수가 높은 술(15% 초과)의 우선순위를 낮춰요",
+  drunk: "가볍게 마시기 좋은 저도수 주류를 우선 추천해요",
+  noisy: "차분히 맛과 향을 음미하기 좋은 주류를 탐색해요",
+  none: "감점 조건 없이 좋아하는 음료 취향 중심으로 추천해요",
 };
+const Q3_SUB = {
+  taste: "근처 바에서 10~30mL씩 가볍게 (가상 시음 시나리오)",
+  home: "사기 전에 후기와 쉬운 맛 설명부터 살펴볼게요",
+  friends: "함께 가볍게 나눠 마시기 좋은 청량한 술 위주로",
+};
+const BAR_TONES = ["#8B2744", "#B04A5E", "#6E3A5E", "#A85A3C"]; // 맛 막대 색 (와인, 로제, 자두, 호박)
+const TINT = {
+  와인: "#F6E3E8", 스파클링: "#F7EFD9", 맥주: "#F8ECD3", 전통주: "#F0EBDD", 사케: "#EEF0EA",
+  위스키: "#F4E6DA", 브랜디: "#F4E6DA", 진: "#E9EFEC", 럼: "#E9EFEC", 데킬라: "#E9EFEC",
+};
+const UNPROVIDED = "정보 없음 (원본 데이터 미기재)";
+const HEART_SPARKS = [C.primary, "#B04A5E", C.primaryContainer];
 
-/* ---------- router ---------- */
-function parse(hash = location.hash) {
-  const h = hash.replace(/^#/, "") || "/";
-  const [path, qs] = h.split("?");
-  return { path, parts: path.split("/").filter(Boolean), q: new URLSearchParams(qs || "") };
+/* ---------- 바와 시음 메뉴 (앱 NearbyModels와 같은 계산) ---------- */
+const minutesOf = (b) => parseInt(String(b.distance).replace(/\D/g, ""), 10) || 10;
+const menusOf = (b) => b.pours.map((p) => ({ ...p, id: `${b.id}_${p.drinkId}_${p.ml}`, bar: b, drink: drinkById[p.drinkId] }));
+const menuById = (id) => { const b = barById[String(id).split("_")[0]]; return b && menusOf(b).find((m) => m.id === id); };
+const drinksOf = (b) => [...new Set(b.pours.map((p) => p.drinkId))].map((id) => drinkById[id]).filter(Boolean);
+const catsOf = (b) => [...new Set(drinksOf(b).map((d) => d.category))];
+function volRange(ms) {
+  const v = ms.map((m) => m.ml);
+  const a = Math.min(...v), z = Math.max(...v);
+  return a === z ? `${a}mL` : `${a}~${z}mL`;
 }
-const TAB_ROOTS = ["feed", "nearby", "log"];
-const isTabRoot = (path) => {
-  const p = path.split("/").filter(Boolean);
-  return p.length === 1 && TAB_ROOTS.includes(p[0]);
+function priceRange(ms) {
+  const v = ms.map((m) => m.price);
+  const a = Math.min(...v), z = Math.max(...v);
+  return a === z ? `예시 ${won(a)}` : `예시 ${won(a)} ~ ${won(z)}`;
+}
+const volNote = (m) => (m.ml >= 10 && m.ml <= 30 ? `소량 시음 (${m.ml}mL)` : `잔 단위 예외 시음 (${m.ml}mL · 원본 주석 기준)`);
+const openedLabel = (m) => (m.openedDays === 0 ? "당일 개봉·즉석 조제 시나리오 (0일째)" : `개봉 ${m.openedDays}일째 시나리오`);
+const statusNote = (m) => (m.lastToday ? "시나리오 표기: 오늘 소진 예정 예시 (실시간 재고 아님)" : "시나리오 표기: 일반 시음 예시 (실시간 재고 아님)");
+const ABV_NOTE = {
+  H4: "도수 구분 안내: 위스키 원액 도수는 약 40%이지만, 탄산수를 섞은 완성 하이볼 음료의 실제 음용 도수는 약 7~9%예요.",
+  H5: "도수 구분 안내: '진토닉용'으로 표기된 런던 드라이 진이며, 표기된 도수(약 40~47%)와 맛 점수는 토닉워터를 섞기 전 진 원액 기준이에요.",
 };
-// Where a back drag lands when there is no history (opened from a shared link).
-function parentOf(hash) {
-  const { parts, q } = parse(hash);
-  switch (parts[0]) {
-    case "card": return "#/feed";
-    case "bar": return q.get("drink") ? `#/nearby/${q.get("drink")}` : "#/nearby";
-    case "review": return `#/card/${parts[1]}`;
-    case "nearby": return parts[1] ? `#/card/${parts[1]}` : null;
-    case "q": return Number(parts[1]) > 1 ? `#/q/${Number(parts[1]) - 1}` : "#/";
-    case "result": return "#/q/3";
-    default: return null;
+const barsFor = (id) => BARS.filter((b) => b.pours.some((p) => p.drinkId === id));
+const CATEGORIES = [...new Set(BARS.flatMap((b) => catsOf(b)))];
+
+/* ---------- 상태 ---------- */
+function ensureRecs() {
+  if (!state.prefs) {
+    state.prefs = state.basePrefs = prefsFromAnswers(state.answers.q1);
+    state.fb = [];
+    state.order = rank(DRINKS, state.prefs, state.answers.q2, state.answers.q3);
+    save();
   }
+  if (!state.order.length) state.order = rank(DRINKS, state.prefs, state.answers.q2, state.answers.q3);
 }
-
-let feedKeep = null;
-function dropFeed() {
-  feedKeep?.el.remove();
-  feedKeep = null;
-}
-
-// Back drag starts anywhere except on things with their own sideways gesture,
-// or anywhere within the left edge strip.
-function backFilter(e) {
-  if (e.clientX - app.getBoundingClientRect().left < 28) return true;
-  return !e.target.closest("[data-noswipe], input, textarea");
-}
-
-function build(hash) {
-  const r = parse(hash);
-  const key = r.parts[0] || "";
-  if (key === "feed" && feedKeep?.el.isConnected) { feedKeep.show(); return feedKeep.el; }
-  const fn = ROUTES[key] || welcome;
-  const view = fn(r);
-  if (!view) return null;
-  const tpl = document.createElement("template");
-  tpl.innerHTML = view.html.trim();
-  const el = tpl.content.firstElementChild;
-  app.append(el);
-  view.mount?.(el);
-  if (key === "feed") feedKeep = { el, show: () => view.show?.(el) };
-  if (key && !isTabRoot(r.path)) nav.drag(el, { dir: "back", target: () => nav.prevHash(), filter: backFilter });
-  return el;
-}
-
-const nav = createNav({ root: app, build, parentOf, isTabRoot, keep: (el) => el === feedKeep?.el });
-const go = (hash, opts) => nav.go(hash, opts);
-const back = (fallback) => nav.back(fallback);
-const render = () => nav.refresh();
+// 결과 화면 순위 (처음 답 기준, 반응으로 바뀌지 않음)
+const resultRank = () => rank(DRINKS, state.basePrefs || prefsFromAnswers(state.answers.q1), state.answers.q2, state.answers.q3);
+const typeName = () => (state.answers.q1.length ? tasteType(state.prefs || prefsFromAnswers(state.answers.q1)) : "골고루 탐험파");
+const reasonText = (d) => explain(d, state.answers).why.join(" ");
+const cautionText = (d) => explain(d, state.answers).risk[0] || "";
 
 // 끌려요, 패스, 후기를 순서대로 기록해 두고 처음 취향에서 다시 계산한다.
 // 그래서 끌려요나 패스를 취소하면 그 반응이 없었던 것처럼 취향이 돌아간다.
@@ -103,7 +91,6 @@ function recompute() {
   for (const e of state.fb) { const d = drinkById[e.id]; if (d) p = nudge(p, d, e.v); }
   state.prefs = p;
 }
-// v: true 끌려요, false 패스, null 반응 없음. 후기로 남긴 반응은 건드리지 않는다.
 function setFeedback(id, v, src = "feed") {
   if (!state.basePrefs) state.basePrefs = state.prefs || prefsFromAnswers(state.answers.q1);
   state.fb = state.fb.filter((e) => !(e.id === id && e.src !== "review"));
@@ -116,875 +103,1016 @@ function setFeedback(id, v, src = "feed") {
   recompute();
   save();
 }
-const LIKED = "♥";
+let feedDirty = false; // 맛 카드나 후기에서 반응이 바뀌면 피드로 돌아갈 때 다음 잔 순서를 다시 정한다
 
-function ensureRecs() {
-  if (!state.prefs) {
-    state.prefs = state.basePrefs = prefsFromAnswers(state.answers.q1);
-    state.fb = [];
-    state.order = rank(DRINKS, state.prefs, state.answers.q2, state.answers.q3);
-    save();
+/* ---------- 라우터 ---------- */
+function parse(hash = location.hash) {
+  const h = hash.replace(/^#/, "") || "/";
+  const [path, qs] = h.split("?");
+  return { path, parts: path.split("/").filter(Boolean), q: new URLSearchParams(qs || "") };
+}
+const TAB_ROOTS = ["feed", "nearby", "log"];
+const isTabRoot = (path) => {
+  const p = path.split("/").filter(Boolean);
+  return p.length === 1 && TAB_ROOTS.includes(p[0]);
+};
+function parentOf(hash) {
+  const { parts, q } = parse(hash);
+  switch (parts[0]) {
+    case "card": return "#/feed";
+    case "nearby": return parts[1] ? "#/nearby" : null;
+    case "bar": return q.get("drink") ? `#/nearby/${q.get("drink")}` : "#/nearby";
+    case "try": return `#/bar/${parts[1]}`;
+    case "review": return `#/card/${parts[1]}`;
+    case "q": return Number(parts[1]) > 1 ? `#/q/${Number(parts[1]) - 1}` : "#/";
+    case "result": return "#/q/3";
+    default: return null;
   }
 }
 
-const ROUTES = {
-  "": welcome, q: question, result, feed, card, nearby, bar, review, log,
-};
+let feedKeep = null;
+function dropFeed() { feedKeep?.el.remove(); feedKeep = null; }
+function backFilter(e) {
+  if (e.clientX - app.getBoundingClientRect().left < 28) return true;
+  return !e.target.closest("[data-noswipe], input, textarea, .hrow");
+}
+function build(hash) {
+  const r = parse(hash);
+  const key = r.parts[0] || "";
+  if (key === "feed" && feedKeep?.el.isConnected) { feedKeep.show(); return feedKeep.el; }
+  const fn = ROUTES[key] || start;
+  const view = fn(r);
+  if (!view) return null;
+  const tpl = document.createElement("template");
+  tpl.innerHTML = view.html.trim();
+  const el = tpl.content.firstElementChild;
+  app.append(el);
+  view.mount?.(el);
+  if (key === "feed") feedKeep = { el, show: () => view.show?.(el) };
+  if (key && !isTabRoot(r.path)) nav.drag(el, { dir: "back", target: () => nav.prevHash(), filter: backFilter });
+  return el;
+}
+const nav = createNav({ root: app, build, parentOf, isTabRoot, keep: (el) => el === feedKeep?.el });
+const go = (hash, opts) => nav.go(hash, opts);
+const back = (fallback) => nav.back(fallback);
+const render = () => nav.refresh();
 
-/* ---------- helpers ---------- */
+/* ---------- 공통 조각 ---------- */
+const toastEl = document.createElement("div");
+toastEl.className = "toast";
+toastEl.setAttribute("role", "status");
+app.append(toastEl);
 let toastTimer;
 function toast(msg) {
-  const t = document.getElementById("toast");
-  t.textContent = msg;
-  t.classList.add("show");
+  toastEl.textContent = msg;
+  toastEl.classList.add("show");
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.classList.remove("show"), 1900);
+  toastTimer = setTimeout(() => toastEl.classList.remove("show"), 1900);
 }
 
 function tabbar(active) {
-  const tab = (id, href, icon, label) =>
-    `<a href="${href}" class="${active === id ? "on" : ""}" ${active === id ? 'aria-current="page"' : ""}><span class="ico">${icon}</span>${label}</a>`;
+  const tab = (id, href, ico, label) =>
+    `<a href="${href}" class="${active === id ? "on" : ""}" ${active === id ? 'aria-current="page"' : ""}><span class="ico">${ico}</span>${label}</a>`;
   return `<nav class="tabbar" aria-label="메뉴">
-    ${tab("feed", "#/feed", I.compass, "탐색")}
-    ${tab("nearby", "#/nearby", I.pin, "근처 한 잔")}
-    ${tab("log", "#/log", I.bookmark, "내 기록")}
+    ${tab("feed", "#/feed", icon.compass, "탐색")}
+    ${tab("nearby", "#/nearby", icon.pinLine, "근처 한 잔")}
+    ${tab("log", "#/log", icon.book, "내 기록")}
   </nav>`;
 }
+const topbar = (title, { backLabel = "뒤로", trailing = "", noBack = false } = {}) => `<header class="topbar">
+  ${noBack ? "" : `<button class="icon-btn" data-back aria-label="${backLabel}">${icon.back()}</button>`}
+  <h1 class="title ${noBack ? "pad-l" : ""}">${title}</h1>${trailing}</header>`;
+const infoRow = (label, value, w72 = false) => `<div class="info-row ${w72 ? "w72" : ""}"><b>${esc(label)}</b><span>${esc(value)}</span></div>`;
+const virtualNote = () => `<p class="virtual-note"><span class="i" aria-hidden="true">i</span>바·가격·개봉일은 평가용 가상 데이터예요. 실제 예약·결제는 없어요.</p>`;
+function bindBack(el) { el.querySelector("[data-back]")?.addEventListener("click", () => back()); }
 
-function reviewsFor(id) {
-  return [...state.reviews.filter((r) => r.drinkId === id), ...SAMPLE_REVIEWS.filter((r) => r.drinkId === id)];
-}
-function topChip(list) {
-  const c = {};
-  list.forEach((r) => r.chips.forEach((x) => (c[x] = (c[x] || 0) + 1)));
-  const top = Object.entries(c).sort((a, b) => b[1] - a[1])[0];
-  return top ? top[0] : null;
-}
-function poursFor(id) {
-  return BARS.flatMap((b) => b.pours.filter((p) => p.drinkId === id).map((p) => ({ ...p, bar: b })));
-}
-const minutes = (s) => parseInt(String(s).replace(/\D/g, ""), 10) || 99;
-function openNow(hours) {
-  const [a, b] = hours.split("~").map((t) => { const [h, m] = t.split(":").map(Number); return h * 60 + m; });
-  const d = new Date();
-  const now = d.getHours() * 60 + d.getMinutes();
-  const end = b <= a ? b + 1440 : b;
-  return (now >= a && now < end) || (now + 1440 >= a && now + 1440 < end);
-}
-function bars(prefs, n = 4) {
-  return typeBars(prefs, n).map((b) => `<div class="bar-row"><span>${b.label}</span>
-    <span class="track"><span class="fill" style="display:block;width:${b.pct}%;background:${AXIS_COLOR[b.axis]}"></span></span>
-    <span>${b.pct}%</span></div>`).join("");
-}
-function abvShort(d) {
-  return d.abvLabel.includes(",") ? d.abvLabel.split(",")[1].replace("하이볼은 ", "하이볼 ").replace("약 ", "").trim() : d.abvLabel.replace("약 ", "");
-}
-
-/* ---------- A. onboarding ---------- */
-function welcome() {
-  if (state.prefs) { go("#/feed", { replace: true }); return null; }
+/* ---------- A. 시작 ---------- */
+function start() {
   return {
-    html: `<section class="screen">
-      <div class="top"><p class="brand">한모금</p></div>
-      <div class="welcome-art" aria-hidden="true">
-        <div class="fc a">향긋한 꽃<br>같은 달콤함</div>
-        <div class="fc b">복숭아 아이스티<br>같은 상큼함</div>
-        <div class="fc c">고소한 누룽지<br>같은 부드러움</div>
-      </div>
-      <div class="pad" style="margin-top:auto">
-        <h1 class="h1">소주 맥주 너머,<br>내 입맛의 첫 한 모금</h1>
-        <p class="sub">어려운 용어는 빼고, 좋아하는 맛에서 시작해요.</p>
-      </div>
-      <div class="bottom">
-        <a class="btn btn-primary" href="#/q/1">내 취향 찾기</a>
-        <button class="btn btn-secondary" data-skip>먼저 둘러볼게요</button>
-      </div>
+    html: `<section class="screen start">
+      <div class="sp"></div>
+      ${logoSVG(136, { fill: 0 })}
+      <div class="reveal"><div class="center">
+        <h1 class="brand">한모금</h1>
+        <p class="lead">소주 맥주 너머,<br>내 입맛의 첫 한 모금</p>
+      </div></div>
+      <div class="sp"></div>
+      <div class="reveal late"><div class="actions">
+        <a class="btn btn-p" href="#/q/1" data-startq>내 취향 찾기</a>
+        <p class="t-bs c-v">질문 3개 · 약 30초</p>
+        <button class="btn-t" data-sample>샘플 추천 먼저 둘러보기</button>
+        <p class="t-bs c-v">평가용 예시 데이터로 동작해요</p>
+      </div></div>
     </section>`,
     mount(el) {
-      el.querySelector("[data-skip]").onclick = () => { ensureRecs(); go("#/feed"); };
+      pourLogo(el.querySelector("svg.logo"), { fromSplash: true, onSettled: () => el.classList.add("on") });
+      el.querySelector("[data-startq]").addEventListener("click", () => {
+        state.answers = { q1: [], q2: [], q3: null };
+        state.skipped = false;
+        save();
+      });
+      el.querySelector("[data-sample]").onclick = () => {
+        state.answers = { q1: [], q2: [], q3: null };
+        state.skipped = true;
+        save();
+        justAnswered = true;
+        go("#/result");
+      };
     },
   };
 }
 
-function progress(n) {
-  return `<div class="progress" aria-label="${n}/3 단계">${[1, 2, 3].map((i) => `<i class="${i <= n ? "on" : ""}"></i>`).join("")}
-    <a class="skip" href="${n < 3 ? `#/q/${n + 1}` : "#/result"}">건너뛰기</a></div>`;
-}
-
+/* ---------- A. 질문 3개 ---------- */
+let justAnswered = false;
 function question({ parts }) {
-  const n = Number(parts[1]) || 1;
+  const n = Math.min(3, Math.max(1, Number(parts[1]) || 1));
   const a = state.answers;
+  const cfg = {
+    1: { title: "평소 좋아하는\n음료는 뭐예요?", helper: "여러 개 골라도 좋아요.", skip: "건너뛰기" },
+    2: { title: "소주나 맥주,\n어떤 점이 아쉬웠나요?", helper: "고른 만큼 추천에 반영돼요. 없으면 그냥 넘어가도 괜찮아요.", skip: "건너뛰기" },
+    3: { title: "새로운 술,\n어떻게 만나고 싶어요?", helper: "한 병을 다 사기 전에, 10~30mL로 먼저 맛보는 방법도 있어요.", skip: "결과 바로 보기" },
+  }[n];
+  let opts = "";
   if (n === 1) {
-    return {
-      html: `<section class="screen"><div class="top">${progress(1)}</div>
-        <div class="scroll pad">
-          <h1 class="h1">평소 좋아하는<br>음료는 뭐예요?</h1>
-          <p class="sub">여러 개 골라도 좋아요</p>
-          <div class="grid2">${Q1.map((q) => `<button class="tile" style="background:${q.color}" data-id="${q.id}" aria-pressed="${a.q1.includes(q.id)}">
-            <span class="check">${I.check}</span><b>${q.label}</b><small>${q.sub}</small></button>`).join("")}</div>
-        </div>
-        <div class="bottom"><button class="btn btn-primary" data-next ${a.q1.length ? "" : "disabled"}>다음</button></div></section>`,
-      mount(el) {
-        el.querySelectorAll(".tile").forEach((b) => (b.onclick = () => {
-          const id = b.dataset.id;
-          a.q1 = a.q1.includes(id) ? a.q1.filter((x) => x !== id) : [...a.q1, id];
-          b.setAttribute("aria-pressed", a.q1.includes(id));
-          el.querySelector("[data-next]").disabled = !a.q1.length;
-          save();
-        }));
-        el.querySelector("[data-next]").onclick = () => go("#/q/2");
-      },
-    };
+    opts = `<div class="tiles" role="group" aria-label="좋아하는 음료">${Q1.map((o) => `<button class="sel tile press" role="checkbox" aria-checked="${a.q1.includes(o.id)}" data-id="${o.id}">
+      <span class="glyph-bg">${glyph(o.id, 36)}</span><span class="t-tm">${o.label}</span><span class="t-bm c-v">${o.sub}</span>
+      <span class="badge" aria-hidden="true">${icon.check(14)}</span></button>`).join("")}</div>`;
+  } else if (n === 2) {
+    opts = `<div class="reasons" role="group" aria-label="아쉬웠던 점">${Q2.map((o) => `<button class="sel reason press" role="checkbox" aria-checked="${a.q2.includes(o.id)}" data-id="${o.id}">
+      <span class="row"><span class="lbl">${o.label}</span><span class="dot" aria-hidden="true">${icon.check(14)}</span></span>
+      <span class="eff"><p>→ ${Q2_EFFECT[o.id] || ""}</p></span></button>`).join("")}</div>`;
+  } else {
+    opts = `<div class="radios" role="radiogroup" aria-label="새로운 술을 만나는 방식">${Q3.map((o) => `<button class="sel radio-card press" role="radio" aria-checked="${a.q3 === o.id}" data-id="${o.id}">
+      <span class="glyph-bg">${glyph(o.id, 40)}</span>
+      <span class="grow stack" style="gap:2px"><span class="t-tm">${o.label}</span><span class="t-bm c-v">${Q3_SUB[o.id] || o.sub}</span></span>
+      <span class="ring" aria-hidden="true"><i></i></span></button>`).join("")}</div>`;
   }
-  if (n === 2) {
-    return {
-      html: `<section class="screen"><div class="top">${progress(2)}</div>
-        <div class="scroll pad">
-          <h1 class="h1">소주나 맥주,<br>어떤 점이 아쉬웠나요?</h1>
-          <p class="sub">솔직하게 골라주세요. 비슷한 맛은 빼고 추천해요.</p>
-          <div class="chips" style="margin-top:22px">${Q2.map((q) => `<button class="chip" data-id="${q.id}" aria-pressed="${a.q2.includes(q.id)}">${q.label}</button>`).join("")}</div>
-        </div>
-        <div class="bottom"><button class="btn btn-primary" data-next>다음</button></div></section>`,
-      mount(el) {
-        el.querySelectorAll(".chip").forEach((b) => (b.onclick = () => {
-          const id = b.dataset.id;
+  const label = () => {
+    if (n === 1) return a.q1.length ? `다음 · ${a.q1.length}개 골랐어요` : "음료를 골라 주세요";
+    if (n === 2) return a.q2.length ? `다음 · ${a.q2.length}개 반영할게요` : "선택 없이 다음으로";
+    return a.q3 ? "내 취향 결과 보기" : "하나를 골라 주세요";
+  };
+  const enabled = () => (n === 1 ? a.q1.length > 0 : n === 2 ? true : !!a.q3);
+  return {
+    html: `<section class="screen">
+      <div class="q-head">
+        <div class="row"><button class="icon-btn" data-back aria-label="이전으로">${icon.back()}</button><span class="grow"></span>
+          <button class="btn-t v" data-skip>${cfg.skip}</button></div>
+        <div class="progress" role="img" aria-label="전체 3개 질문 중 ${n}번째"><i style="width:${((n - 1) / 3) * 100}%"></i></div>
+      </div>
+      <div class="scroll"><div class="q-body">
+        <p class="t-ll c-p">질문 ${n}</p>
+        <h1 class="t-hl pre">${cfg.title}</h1>
+        <p class="t-bl c-v helper">${cfg.helper}</p>
+        <div class="opts">${opts}</div>
+      </div></div>
+      <div class="bottom"><button class="btn btn-p" data-next></button></div>
+    </section>`,
+    mount(el) {
+      bindBack(el);
+      requestAnimationFrame(() => requestAnimationFrame(() => (el.querySelector(".progress i").style.width = `${(n / 3) * 100}%`)));
+      const nb = el.querySelector("[data-next]");
+      const sync = () => { nb.textContent = label(); nb.disabled = !enabled(); };
+      sync();
+      el.querySelectorAll("[data-id]").forEach((b) => (b.onclick = () => {
+        const id = b.dataset.id;
+        buzz(5);
+        if (n === 1) a.q1 = a.q1.includes(id) ? a.q1.filter((x) => x !== id) : [...a.q1, id];
+        else if (n === 2) {
           if (id === "none") a.q2 = a.q2.includes("none") ? [] : ["none"];
           else a.q2 = a.q2.includes(id) ? a.q2.filter((x) => x !== id) : [...a.q2.filter((x) => x !== "none"), id];
-          el.querySelectorAll(".chip").forEach((c) => c.setAttribute("aria-pressed", a.q2.includes(c.dataset.id)));
-          save();
-        }));
-        el.querySelector("[data-next]").onclick = () => go("#/q/3");
-      },
-    };
-  }
-  return {
-    html: `<section class="screen"><div class="top">${progress(3)}</div>
-      <div class="scroll pad">
-        <h1 class="h1">새로운 술,<br>어떻게 만나고 싶어요?</h1>
-        <p class="sub">한 병 사기 전에 먼저 맛볼 수도 있어요.</p>
-        <div style="margin-top:22px">${Q3.map((q) => `<button class="option" data-id="${q.id}" aria-pressed="${a.q3 === q.id}">
-          <span class="check">${I.check}</span><b>${q.label}</b><small>${q.sub}</small></button>`).join("")}</div>
-      </div>
-      <div class="bottom"><button class="btn btn-primary" data-next ${a.q3 ? "" : "disabled"}>분석 결과 보기</button></div></section>`,
-    mount(el) {
-      el.querySelectorAll(".option").forEach((b) => (b.onclick = () => {
-        a.q3 = b.dataset.id;
-        el.querySelectorAll(".option").forEach((o) => o.setAttribute("aria-pressed", o.dataset.id === a.q3));
-        el.querySelector("[data-next]").disabled = false;
+        } else a.q3 = id;
+        state.skipped = false;
         save();
+        el.querySelectorAll("[data-id]").forEach((x) => {
+          const v = x.dataset.id;
+          x.setAttribute("aria-checked", n === 1 ? a.q1.includes(v) : n === 2 ? a.q2.includes(v) : a.q3 === v);
+        });
+        sync();
       }));
-      el.querySelector("[data-next]").onclick = () => go("#/result");
+      nb.onclick = () => {
+        if (n < 3) go(`#/q/${n + 1}`);
+        else { justAnswered = true; go("#/result"); }
+      };
+      el.querySelector("[data-skip]").onclick = () => {
+        if (n === 1) a.q1 = [];
+        if (n === 2) a.q2 = [];
+        save();
+        if (n === 3) { justAnswered = true; go("#/result"); } else go(`#/q/${n + 1}`);
+      };
     },
   };
 }
 
+/* ---------- A. 결과 ---------- */
 function result() {
   const a = state.answers;
   state.basePrefs = prefsFromAnswers(a.q1);
-  // 처음 추천 세 잔. 여기서 누른 하트는 피드까지 이어진다.
-  const first = rank(DRINKS, state.basePrefs, a.q2, a.q3).slice(0, 3);
-  state.fb = state.fb.filter((e) => e.src === "result" && first.includes(e.id));
+  const top5 = resultRank().slice(0, 5);
+  // 결과 화면에서 누른 하트만 남기고(피드로 이어짐), 이전 피드 반응은 새 취향에서 다시 시작한다.
+  state.fb = state.fb.filter((e) => e.src === "result" && top5.includes(e.id));
+  state.liked = state.liked.filter((id) => state.fb.some((e) => e.id === id));
   state.passed = [];
   recompute();
   state.order = rank(DRINKS, state.prefs, a.q2, a.q3);
   state.feedIndex = 0;
   save();
   dropFeed();
-  const sip = (id) => {
+  const analyzing = justAnswered && !reduceMotion();
+  justAnswered = false;
+  const base = state.basePrefs;
+  const barsData = typeBars(base, 4);
+  const picks = [
+    ...Q1.filter((o) => a.q1.includes(o.id)).map((o) => o.label),
+    ...Q2.filter((o) => a.q2.includes(o.id)).map((o) => o.label),
+    ...Q3.filter((o) => o.id === a.q3).map((o) => o.label),
+  ];
+  const recCard = (id, i) => {
     const d = drinkById[id];
-    const on = state.liked.includes(id);
-    return `<button class="sip" data-sip="${id}" aria-pressed="${on}" aria-label="${esc(shortName(d))} 끌려요">
-      <span class="sw" style="background:${drinkColor(d)}">${bottle(d, { title: false })}</span>
-      <b>${esc(shortName(d))}</b><small>${esc(d.category)}</small>
-      <span class="sip-heart" aria-hidden="true">${I.heart}</span></button>`;
+    const liked = state.liked.includes(id);
+    const why = reasonText(d), caution = cautionText(d);
+    return `<button class="rec press" data-rec="${id}" aria-pressed="${liked}" aria-label="${i + 1}위 ${esc(d.name)}, 눌러서 끌림 표시">
+      <span class="row gap16" style="align-items:flex-start">
+        ${drinkArt(d)}
+        <span class="grow stack" style="gap:2px">
+          <span class="t-ll c-p">${i + 1}위</span>
+          <span class="t-tm">${esc(d.name)}</span>
+          <span class="t-bm c-v">${esc(d.category)} · ${esc(d.abvLabel)}</span>
+          <span class="t-bm c-p" style="font-weight:500;margin-top:2px">“${esc(d.oneLine)}”</span>
+        </span>
+        <span class="pop-heart" aria-hidden="true">${icon.heart(true, 28)}</span>
+      </span>
+      ${why ? `<span class="t-bm">${esc(why)}</span>` : ""}
+      ${caution ? `<span class="t-bs c-v">참고: ${esc(caution)}</span>` : ""}
+    </button>`;
   };
-  const type = typeName();
-  const words = type.split(" ");
-  const title = words.length > 2 ? `${words.slice(0, -1).join(" ")}<br>${words.at(-1)}` : type;
-  return {
-    html: `<section class="screen" style="background:var(--mist)">
-      <div class="scroll pad" style="padding-top:calc(20px + env(safe-area-inset-top))">
-        <h1 class="h1">취향 분석 끝!</h1>
-        <div class="result-card">
-          <span class="pill" style="background:var(--c-fruit)">나는 이런 타입</span>
-          <p class="h1" style="font-size:34px;margin-top:12px">${title}</p>
-          <p class="sub">${typeBlurb(state.prefs)}</p>
-          <div class="bars">${bars(state.prefs)}</div>
-        </div>
-        <p class="section-title">나에게 맞는 첫 한 모금</p>
-        <p class="sub">끌리는 잔을 눌러 두면 피드에서도 하트가 켜져 있어요.</p>
-        <div class="first-sips">${first.map(sip).join("")}</div>
-        <p class="sub" style="margin-top:12px">처음 몇 개를 보는 동안 취향은 계속 다듬어져요.</p>
+  const content = `<div class="stack" style="flex:1;min-height:0" data-content>
+    <div class="topbar"><button class="icon-btn" data-back aria-label="이전 질문으로">${icon.back()}</button><span class="grow"></span>
+      <span class="t-bs c-v" style="padding-right:12px">평가용 예시 데이터</span></div>
+    <div class="scroll"><div class="pad" style="padding-top:8px;padding-bottom:32px">
+      <p class="t-ll c-p">${state.skipped ? "기본 탐색 유형" : "나의 취향 유형"}</p>
+      <h1 class="t-hl" style="font-size:30px;line-height:38px;margin-top:4px">${esc(typeName())}</h1>
+      <p class="t-bl c-v" style="margin-top:8px">${esc(typeBlurb(base))}</p>
+      <div class="card taste-bars" style="margin-top:24px">
+        <p class="t-tm">내가 끌리는 맛</p>
+        ${barsData.map((b, i) => `<div class="tbar" role="img" aria-label="${b.label} ${b.pct}퍼센트">
+          <div class="row"><span class="t-bl" style="font-weight:500">${b.label}</span><span class="t-bm c-v" data-pct="${b.pct}">0%</span></div>
+          <div class="track"><div class="fill" style="background:${BAR_TONES[i % 4]};transition-delay:${120 * i + 150}ms" data-w="${b.pct}"></div></div></div>`).join("")}
       </div>
-      <div class="bottom"><a class="btn btn-primary" href="#/feed" data-start>첫 추천 5개 보러 가기</a></div>
-    </section>`,
-    mount(el) {
-      el.querySelectorAll("[data-sip]").forEach((b) => (b.onclick = () => {
-        const id = b.dataset.sip;
-        const on = !state.liked.includes(id);
-        setFeedback(id, on ? true : null, "result");
-        b.setAttribute("aria-pressed", on);
-        pop(b, on ? 1.06 : 0.96);
-        if (on) { burst(b.querySelector(".sip-heart"), app); buzz(10); }
-      }));
-      // 하트를 반영한 취향으로 피드 순서를 다시 정한다.
-      el.querySelector("[data-start]").onclick = () => {
-        state.order = rank(DRINKS, state.prefs, a.q2, a.q3);
-        save();
-        dropFeed();
-      };
-    },
-  };
-}
-
-/* ---------- B. feed and card ---------- */
-function reelHTML(d, i, total) {
-  const liked = state.liked.includes(d.id);
-  const passed = state.passed.includes(d.id);
-  const label = i < 5 ? `오늘의 탐색 ${i + 1}/5` : `더 둘러보기 ${i + 1}/${total}`;
-  const showHint = !state.hintSeen && i === 0;
-  return `<article class="reel" data-id="${d.id}" data-i="${i}" style="background:${drinkColor(d)}">
-    <div class="reel-head"><span class="pill glass">${label}</span>
-      <span class="reel-head-r"><button class="pill glass liked-count" data-liked aria-label="끌린 술 목록 보기">${I.heart.replace("<svg", '<svg width="14" height="14"')}<span data-n>${state.liked.length}</span></button><a class="pill glass" href="#/log" data-type>${esc(typeName())}</a></span></div>
-    <div class="reel-visual"><span class="halo"></span>${bottle(d)}</div>
-    <button class="peek-edge" data-open aria-label="맛 카드 보기">${I.back}</button>
-    ${showHint ? `<span class="hint-swipe" aria-hidden="true">왼쪽으로 밀어보세요</span>` : ""}
-    <div class="reel-info">
-      <div>
-        <span class="pill glass">${esc(d.category)} · ${esc(abvShort(d))}</span>
-        <h2 class="h1">${esc(d.oneLine)}</h2>
-        <p class="lead">${esc(d.vsSoju)}</p>
-        ${(() => {
-          // 탐색에서 바로 맛보러 가기: 이 술을 파는 근처 바 수를 보여 주고 지도로 잇는다.
-          const n = BARS.filter((b) => b.pours.some((p) => p.drinkId === d.id)).length;
-          return n ? `<a class="pill glass taste-near" href="#/nearby/${d.id}">${I.pin.replace("<svg", '<svg width="14" height="14"')}근처 ${n}곳에서 맛보기 ${I.left.replace("<svg", '<svg width="12" height="12" style="transform:scaleX(-1)"')}</a>` : "";
-        })()}
-      </div>
-      <div class="reel-actions">
-        <button data-like aria-pressed="${liked}"><span class="circle">${I.heart}</span>끌려요</button>
-        <button data-pass aria-pressed="${passed}"><span class="circle">${I.x}</span>패스</button>
+      ${picks.length ? `<p class="t-ll c-v" style="margin-top:16px">내가 고른 답</p><div class="picks">${picks.map((p) => `<span>${esc(p)}</span>`).join("")}</div>` : ""}
+      <h2 class="t-tl" style="margin-top:32px">나에게 맞는 첫 한 모금</h2>
+      <p class="t-bm c-v" style="margin-top:4px">끌리는 술을 눌러 하트를 남겨 두세요.</p>
+      <div class="stack gap12" style="margin-top:12px">${top5.map(recCard).join("")}</div>
+    </div></div>
+    <div class="bottom" style="padding-bottom:calc(4px + env(safe-area-inset-bottom))">
+      <a class="btn btn-p" href="#/feed" data-go-feed>이 취향으로 추천 보기</a>
+      <div class="row" style="justify-content:space-evenly">
+        <a class="btn-t v" href="#/q/1">취향 다시 고르기</a>
+        <button class="btn-t v" data-restart>처음으로</button>
       </div>
     </div>
-    <button class="pill glass peek-btn" data-open>밀어서 맛 카드 보기 ${I.left.replace("<svg", '<svg width="14" height="14"')}</button>
-  </article>`;
+  </div>`;
+  const analyzingHTML = `<div class="stack analyzing" style="flex:1" aria-live="polite">
+    ${logoSVG(104, { fill: 0 })}
+    <p class="t-tm center">고른 답으로<br>취향을 분석하고 있어요</p></div>`;
+
+  const mountContent = (el) => {
+    bindBack(el);
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      el.querySelectorAll(".fill").forEach((f) => (f.style.width = `${f.dataset.w}%`));
+      // 퍼센트 숫자도 막대와 함께 올라간다
+      el.querySelectorAll("[data-pct]").forEach((s, i) => {
+        const target = Number(s.dataset.pct);
+        if (reduceMotion()) { s.textContent = `${target}%`; return; }
+        const t0 = performance.now() + 120 * i + 150;
+        const tick = (now) => {
+          const p = Math.min(1, Math.max(0, (now - t0) / 700));
+          s.textContent = `${Math.floor(FOS(p) * target)}%`;
+          if (p < 1) requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+      });
+    }));
+    el.querySelectorAll("[data-rec]").forEach((b) => (b.onclick = () => {
+      const id = b.dataset.rec;
+      const on = !state.liked.includes(id);
+      setFeedback(id, on ? true : null, "result");
+      b.setAttribute("aria-pressed", on);
+      if (on) { buzz(10); burst(b.querySelector(".pop-heart"), app, HEART_SPARKS); }
+    }));
+    el.querySelector("[data-go-feed]").addEventListener("click", () => {
+      state.order = rank(DRINKS, state.prefs, a.q2, a.q3);
+      state.feedIndex = 0;
+      save();
+      dropFeed();
+    });
+    el.querySelector("[data-restart]").onclick = () => {
+      Object.assign(state, { answers: { q1: [], q2: [], q3: null }, prefs: null, basePrefs: null, fb: [], liked: [], passed: [], order: [], feedIndex: 0, skipped: false });
+      save();
+      dropFeed();
+      go("#/", { replace: true, dir: "back" });
+    };
+  };
+  return {
+    html: `<section class="screen">${analyzing ? analyzingHTML : content}</section>`,
+    mount(el) {
+      if (!analyzing) { mountContent(el); return; }
+      pourLogo(el.querySelector("svg.logo"), { fromSplash: false });
+      setTimeout(() => {
+        if (!el.isConnected) return;
+        el.innerHTML = content;
+        el.firstElementChild.classList.add("fade-in");
+        mountContent(el);
+      }, 1500);
+    },
+  };
 }
 
+/* ---------- B. 피드 (릴스) ---------- */
+function reelHTML(d, i, total) {
+  const fbState = state.liked.includes(d.id) ? "like" : state.passed.includes(d.id) ? "pass" : null;
+  const n = barsFor(d.id).length;
+  const why = reasonText(d);
+  return `<div class="page" data-id="${d.id}" data-i="${i}">
+    <div class="page-behind" aria-hidden="true">${icon.chevronLeft()}맛 카드</div>
+    <article class="reel" style="background:linear-gradient(${TINT[d.category] || C.surfaceVariant}, ${C.surface})" aria-label="${esc(d.name)}">
+      <div class="top"><span class="cat">${esc(d.category)}</span><span class="grow"></span>
+        <span class="t-ll c-v" aria-label="${total}잔 중 ${i + 1}번째">${i + 1} / ${total}</span></div>
+      <div class="visual">${drinkArt(d, 150, 200)}
+        <button class="handle" data-open aria-label="${esc(d.name)} 맛 카드 열기">${icon.chevronLeft()}<span>맛<br>카드</span></button></div>
+      <h2 class="name">${esc(d.name)}</h2>
+      <p class="t-bm c-v">${esc(d.category)} · ${esc(d.abvLabel)}</p>
+      <p class="one">“${esc(d.oneLine)}”</p>
+      ${why ? `<p class="t-bm why">${esc(why)}</p>` : ""}
+      ${n ? `<a class="near-link" href="#/nearby/${d.id}" aria-label="${esc(d.name)}, 근처 ${n}곳에서 맛볼 수 있어요. 바 보기">${icon.pin()}근처 ${n}곳에서 10~30mL로 맛볼 수 있어요${icon.chevronRight(16, 16)}</a>` : `<div style="height:16px"></div>`}
+      <div class="fb-row">
+        <button class="fb-btn" data-like aria-pressed="${fbState === "like"}" aria-label="${esc(d.name)} 끌려요"><span class="ic">${icon.heart(fbState === "like", 22)}</span>끌려요</button>
+        <button class="fb-btn" data-pass aria-pressed="${fbState === "pass"}" aria-label="${esc(d.name)} 패스"><span class="ic">${icon.cross(18)}</span>패스</button>
+      </div>
+      ${i === 0 ? `<p class="t-bs c-v center" style="padding-top:8px">위로 넘기면 다음 잔 · 왼쪽으로 밀면 맛 카드</p>` : ""}
+    </article>
+  </div>`;
+}
 function endHTML() {
-  return `<article class="reel reel-end">
-    <p class="h1">오늘의 다섯 잔,<br>다 둘러봤어요</p>
-    <p class="sub" style="margin-bottom:18px">끌린 술은 근처 바에서 10~30mL로 먼저 맛볼 수 있어요.</p>
-    <a class="btn btn-primary" href="#/nearby">근처에서 한 잔 찾기</a>
-    <p class="sub">아래로 넘기면 더 둘러볼 수 있어요</p>
-  </article>`;
+  const liked = state.liked.map((id) => drinkById[id]).filter(Boolean);
+  return `<div class="page" data-end><div class="end-page">
+    ${logoSVG(72)}
+    <h2 class="t-hl" style="font-size:24px;line-height:32px">추천을 다 둘러봤어요</h2>
+    <p class="t-bl c-v">${liked.length ? `끌린 술 ${liked.length}잔, 이제 근처에서 10~30mL로 맛볼 차례예요.` : "끌린 술이 없었다면 취향을 다시 골라 보거나, 근처 바에서 둘러보세요."}</p>
+    ${liked.length ? `<div class="row gap8">${liked.slice(0, 4).map((d) => drinkArt(d, 48, 64)).join("")}</div>` : ""}
+    <a class="btn btn-p" href="#/nearby">${liked.length ? "끌린 술 맛보러 가기" : "근처 바 둘러보기"}</a>
+    <div class="row">${liked.length ? `<button class="btn-t" data-show-liked>끌린 술 보기</button>` : ""}<a class="btn-t v" href="#/q/1">취향 다시 고르기</a></div>
+  </div></div>`;
 }
-
-let peeked = false;
+function feedHead() {
+  const top3 = typeBars(state.prefs, 3).map((b) => b.label).join("·");
+  return `<header class="feed-head">
+    ${logoSVG(30)}
+    <div class="who"><h1 class="t-tm">나를 위한 한모금</h1><p class="t-bs c-v">${esc(typeName())} · ${esc(top3)}</p></div>
+    <button class="head-btn" data-liked aria-label="끌린 술 ${state.liked.length}잔 보기">${icon.heart(state.liked.length > 0, 20)}<span data-n>${state.liked.length}</span></button>
+    <a class="head-btn sm" href="#/nearby" aria-label="근처에서 한 잔, 주변 바 보기">${icon.pin()}근처</a>
+    <a class="head-btn sm" href="#/q/1" style="color:var(--on-surface-v)">취향 다시</a>
+  </header>`;
+}
 function feed() {
   ensureRecs();
-  const ids = state.order;
-  const slides = () => ids.map((id, i) => reelHTML(drinkById[id], i, ids.length) + (i === 4 ? endHTML() : "")).join("");
+  const pages = () => state.order.map((id, i) => reelHTML(drinkById[id], i, state.order.length)).join("") + endHTML();
   return {
-    html: `<section class="screen"><div class="feed" id="feed">${slides()}</div>${tabbar("feed")}</section>`,
-    // Runs when the kept feed comes back on stage.
+    html: `<section class="screen">${feedHead()}<div class="pager" id="pager">${pages()}</div>${tabbar("feed")}</section>`,
     show(el) {
-      el.querySelectorAll(".reel[data-id]").forEach((r) => {
-        r.querySelector("[data-like]").setAttribute("aria-pressed", state.liked.includes(r.dataset.id));
-        r.querySelector("[data-pass]").setAttribute("aria-pressed", state.passed.includes(r.dataset.id));
+      el.querySelector(".feed-head").outerHTML = feedHead();
+      el.querySelector(".feed-head [data-liked]").onclick = () => openLiked(el);
+      if (feedDirty) { feedDirty = false; el._rerank?.(state.feedIndex); }
+      el.querySelectorAll(".page[data-id]").forEach((p) => {
+        const id = p.dataset.id;
+        const like = p.querySelector("[data-like]");
+        like.setAttribute("aria-pressed", state.liked.includes(id));
+        like.querySelector(".ic").innerHTML = icon.heart(state.liked.includes(id), 22);
+        p.querySelector("[data-pass]").setAttribute("aria-pressed", state.passed.includes(id));
       });
-      el.querySelectorAll("[data-n]").forEach((n) => (n.textContent = state.liked.length));
-      el.querySelectorAll("[data-type]").forEach((a) => (a.textContent = typeName()));
-      if (state.hintSeen) el.querySelectorAll(".hint-swipe").forEach((h) => h.remove());
     },
     mount(el) {
-      const f = el.querySelector("#feed");
-      const slideTop = (i) => f.querySelector(`.reel[data-i="${i}"]`)?.offsetTop ?? 0;
-      requestAnimationFrame(() => (f.scrollTop = slideTop(state.feedIndex)));
-
+      const pager = el.querySelector("#pager");
+      const pageTop = (i) => pager.querySelector(`.page[data-i="${i}"]`)?.offsetTop ?? 0;
+      requestAnimationFrame(() => (pager.scrollTop = pageTop(state.feedIndex)));
       let t;
-      f.addEventListener("scroll", () => {
+      pager.addEventListener("scroll", () => {
         clearTimeout(t);
         t = setTimeout(() => {
-          const reels = [...f.querySelectorAll(".reel[data-i]")];
-          const cur = reels.find((r) => Math.abs(r.offsetTop - f.scrollTop) < r.clientHeight / 2);
+          const cur = [...pager.querySelectorAll(".page[data-i]")].find((p) => Math.abs(p.offsetTop - pager.scrollTop) < p.clientHeight / 2);
           if (cur) { state.feedIndex = Number(cur.dataset.i); save(); }
         }, 120);
       });
 
+      // 이미 본 잔은 그대로 두고, 다음 잔들만 지금 취향으로 다시 줄 세운다.
       const rerankAfter = (i) => {
-        const head = state.order.slice(0, i + 1);
-        const rest = DRINKS.filter((d) => !head.includes(d.id));
+        const headIds = state.order.slice(0, i + 1);
+        const rest = DRINKS.filter((d) => !headIds.includes(d.id));
         let tail = rank(rest, state.prefs, state.answers.q2, state.answers.q3);
         tail = [...tail.filter((x) => !state.passed.includes(x)), ...tail.filter((x) => state.passed.includes(x))];
-        state.order = [...head, ...tail];
+        state.order = [...headIds, ...tail];
         save();
-        // Redraw only the slides below the current one.
-        f.querySelectorAll(".reel").forEach((r) => {
-          const ri = r.dataset.i === undefined ? 4.5 : Number(r.dataset.i);
-          if (ri > i) r.remove();
-        });
+        pager.querySelectorAll(".page").forEach((p) => { if (p.dataset.end !== undefined || Number(p.dataset.i) > i) p.remove(); });
         const tmp = document.createElement("div");
-        tmp.innerHTML = state.order.map((id, k) => (k > i ? reelHTML(drinkById[id], k, state.order.length) : "") + (k === 4 && k >= i ? endHTML() : "")).join("");
-        f.append(...tmp.children);
-        bind(f);
+        tmp.innerHTML = state.order.map((id, k) => (k > i ? reelHTML(drinkById[id], k, state.order.length) : "")).join("") + endHTML();
+        pager.append(...tmp.children);
+        bind(pager);
+      };
+      el._rerank = rerankAfter;
+      const updateCount = () => {
+        const h = el.querySelector(".feed-head [data-liked]");
+        h.querySelector("[data-n]").textContent = state.liked.length;
+        h.firstElementChild.outerHTML = icon.heart(state.liked.length > 0, 20);
+        h.setAttribute("aria-label", `끌린 술 ${state.liked.length}잔 보기`);
       };
 
       function bind(root) {
-        root.querySelectorAll(".reel[data-id]").forEach((r) => {
-          if (r.dataset.bound) return;
-          r.dataset.bound = 1;
-          const id = r.dataset.id;
-          const i = Number(r.dataset.i);
-          const seen = () => { state.hintSeen = true; state.feedIndex = i; save(); r.querySelector(".hint-swipe")?.remove(); };
-          r.querySelector("[data-liked]").onclick = () => openLiked();
-          r.querySelectorAll("[data-open]").forEach((b) => (b.onclick = () => { seen(); go(`#/card/${id}`); }));
-          nav.drag(r, { dir: "forward", target: () => `#/card/${id}`, onCommit: () => { seen(); buzz(6); } });
+        root.querySelectorAll(".page[data-id]").forEach((p) => {
+          if (p.dataset.bound) return;
+          p.dataset.bound = 1;
+          const id = p.dataset.id;
+          const i = Number(p.dataset.i);
+          const reel = p.querySelector(".reel");
+          const like = p.querySelector("[data-like]"), pass = p.querySelector("[data-pass]");
+          const open = () => { state.feedIndex = i; state.hintSeen = true; save(); go(`#/card/${id}`); };
+          p.querySelector("[data-open]").onclick = open;
+          dragReel(reel, open);
 
-          r.querySelector("[data-like]").onclick = (e) => {
-            const b = e.currentTarget;
-            const circle = b.querySelector(".circle");
+          like.onclick = () => {
             const on = !state.liked.includes(id);
             setFeedback(id, on ? true : null);
-            b.setAttribute("aria-pressed", on);
-            r.querySelector("[data-pass]").setAttribute("aria-pressed", false);
-            if (on) {
-              pop(circle);
-              burst(circle, app);
-              buzz(12);
-              toast("끌린 맛을 다음 추천에 반영할게요");
-            } else {
-              pop(circle, 0.85);
-              toast("끌려요를 취소했어요");
-            }
+            like.setAttribute("aria-pressed", on);
+            like.querySelector(".ic").innerHTML = icon.heart(on, 22);
+            pass.setAttribute("aria-pressed", false);
+            if (on) { buzz(12); burst(like.querySelector(".ic"), app, HEART_SPARKS); toast("끌린 맛을 다음 추천에 반영할게요"); }
+            else toast("끌려요를 취소했어요");
             updateCount();
             rerankAfter(i);
           };
-
-          r.querySelector("[data-pass]").onclick = (e) => {
-            const pb = e.currentTarget;
+          pass.onclick = () => {
             if (state.passed.includes(id)) {
               setFeedback(id, null);
-              pb.setAttribute("aria-pressed", false);
-              pop(pb.querySelector(".circle"), 0.85);
+              pass.setAttribute("aria-pressed", false);
               toast("패스를 취소했어요");
               rerankAfter(i);
               return;
             }
             buzz(8);
-            e.currentTarget.querySelector(".circle").animate(
-              [{ transform: "rotate(0)" }, { transform: "rotate(90deg) scale(.9)" }, { transform: "rotate(90deg)" }],
-              { duration: 220, easing: EASE });
-            const art = r.querySelector(".reel-visual svg");
-            // Scroll only after the fly-away ends; a running animation can stop Chrome's smooth scroll.
-            art.animate(
-              [{ transform: "none", opacity: 1 }, { transform: "translate(-80px, 30px) rotate(-18deg) scale(.85)", opacity: 0 }],
-              { duration: 280, easing: "cubic-bezier(.5,0,.75,0)" });
             setFeedback(id, false);
-            pb.setAttribute("aria-pressed", true);
-            r.querySelector("[data-like]").setAttribute("aria-pressed", false);
+            pass.setAttribute("aria-pressed", true);
+            like.setAttribute("aria-pressed", false);
+            like.querySelector(".ic").innerHTML = icon.heart(false, 22);
             updateCount();
-            toast("비슷한 맛은 뒤로 미룰게요. 다시 누르면 취소돼요");
+            toast("비슷한 맛은 뒤로 미룰게요");
             rerankAfter(i);
-            const moveOn = () => {
-              art.style.opacity = 0;
-              const next = r.nextElementSibling;
-              if (next) f.scrollTo({ top: next.offsetTop, behavior: "smooth" });
-              setTimeout(() => (art.style.opacity = ""), 900);
-            };
-            setTimeout(moveOn, 290);
+            // 패스하면 다음 잔으로 넘어간다
+            setTimeout(() => {
+              const next = p.nextElementSibling;
+              if (next) pager.scrollTo({ top: next.offsetTop, behavior: reduceMotion() ? "auto" : "smooth" });
+            }, 320);
           };
         });
+        root.querySelector("[data-show-liked]")?.addEventListener("click", () => openLiked(el));
       }
-      bind(f);
+      bind(pager);
+      el.querySelector(".feed-head [data-liked]").onclick = () => openLiked(el);
 
-      function updateCount() {
-        f.querySelectorAll("[data-n]").forEach((n) => (n.textContent = state.liked.length));
-      }
-
-      // 끌린 술 목록. 여기서도 하트를 끄고 켤 수 있고, 근처 바로 바로 넘어갈 수 있다.
-      function openLiked() {
-        const ids = [...state.liked];
-        const changed = new Set();
-        const row = (id) => {
-          const d = drinkById[id];
-          return `<div class="mini lrow"><a class="lrow-link" href="#/card/${id}">
-            <span class="sw" style="background:${drinkColor(d)}">${bottle(d, { title: false })}</span>
-            <span><b>${esc(shortName(d))}</b><small>${esc(d.oneLine)}</small></span></a>
-            <button class="icon-btn lrow-heart" data-un="${id}" aria-pressed="true" aria-label="${esc(shortName(d))} 끌려요 취소">${I.heart}</button></div>`;
-        };
-        const sh = document.createElement("div");
-        sh.className = "modal bottom-sheet";
-        sh.innerHTML = `<div class="lsheet" role="dialog" aria-modal="true" aria-labelledby="ls-t">
-          <div class="grip"></div>
-          <h2 class="h2" id="ls-t">끌린 술 ${ids.length}</h2>
-          ${ids.length ? `<div class="lsheet-list">${ids.map(row).join("")}</div>
-            <a class="btn btn-primary" href="#/nearby" data-near style="margin-top:14px">끌린 술 맛보러 가기</a>`
-          : `<p class="empty" style="margin:18px 0">아직 끌린 술이 없어요.<br>마음에 드는 잔에서 하트를 눌러 보세요.</p>`}
-        </div>`;
-        el.append(sh);
-        buzz(6);
-        const close = () => {
-          sh.remove();
-          if (!changed.size) return;
-          el.querySelectorAll(".reel[data-id]").forEach((r) => {
-            r.querySelector("[data-like]").setAttribute("aria-pressed", state.liked.includes(r.dataset.id));
-          });
-          updateCount();
-          rerankAfter(state.feedIndex);
-        };
-        sh.addEventListener("click", (e) => { if (e.target === sh) close(); });
-        sh.querySelectorAll(".lrow-link").forEach((a) => (a.onclick = () => sh.remove()));
-        sh.querySelector("[data-near]")?.addEventListener("click", () => { nearbyCat = LIKED; sh.remove(); });
-        sh.querySelectorAll("[data-un]").forEach((b) => (b.onclick = () => {
-          const id = b.dataset.un;
-          const on = !state.liked.includes(id);
-          setFeedback(id, on ? true : null);
-          changed.add(id);
-          b.setAttribute("aria-pressed", on);
-          pop(b, on ? 1.2 : 0.85);
-          sh.querySelector("#ls-t").textContent = `끌린 술 ${state.liked.length}`;
-        }));
-      }
-
-      // First visit: briefly show that the taste card sits on the right.
-      if (!state.hintSeen && !peeked) {
-        peeked = true;
+      // 첫 잔에서 한 번만: 카드를 살짝 왼쪽으로 밀었다 돌려놓아 '밀면 뭔가 있다'를 보여 준다.
+      if (!state.hintSeen && !reduceMotion()) {
+        const reel = pager.querySelector('.page[data-i="0"] .reel');
         setTimeout(() => {
-          const cur = state.order[state.feedIndex];
-          if (nav.current()?.el === el && !state.hintSeen && cur) nav.peek(`#/card/${cur}`);
-        }, 1200);
+          if (!reel?.isConnected || state.hintSeen) return;
+          reel.style.transition = "transform 380ms cubic-bezier(.4,0,.2,1)";
+          reel.style.transform = "translateX(-64px) rotate(-0.7deg)";
+          setTimeout(() => {
+            reel.style.transition = "transform 700ms cubic-bezier(.3,1.5,.5,1)";
+            reel.style.transform = "";
+            state.hintSeen = true;
+            save();
+          }, 640);
+        }, 900);
       }
     },
   };
 }
 
-let depth = 1;
+// 카드를 왼쪽으로 밀면 손가락을 따라오고, 96px 넘게 밀면 맛 카드가 열린다. 오른쪽은 살짝만 버틴다.
+function dragReel(reel, open) {
+  let s = null;
+  reel.addEventListener("pointerdown", (e) => {
+    if (e.target.closest("button, a")) return;
+    s = { id: e.pointerId, x: e.clientX, y: e.clientY, dx: 0, on: false };
+  });
+  reel.addEventListener("pointermove", (e) => {
+    if (!s || e.pointerId !== s.id) return;
+    const dx = e.clientX - s.x, dy = e.clientY - s.y;
+    if (!s.on) {
+      if (Math.hypot(dx, dy) < 10) return;
+      if (Math.abs(dx) < Math.abs(dy) * 1.2) { s = null; return; }
+      s.on = true;
+      try { reel.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+      reel.style.transition = "none";
+    }
+    s.dx = dx < 0 ? dx : dx * 0.25;
+    reel.style.transform = `translateX(${s.dx}px) rotate(${s.dx / 90}deg)`;
+  });
+  const end = (e) => {
+    if (!s || e.pointerId !== s.id) return;
+    const { on, dx } = s;
+    s = null;
+    if (!on) return;
+    swallowClick(reel);
+    if (dx < -96 && e.type !== "pointercancel") {
+      buzz(6);
+      open();
+      setTimeout(() => { reel.style.transition = "none"; reel.style.transform = ""; }, 420);
+    } else {
+      reel.style.transition = "transform 500ms cubic-bezier(.3,1.4,.5,1)";
+      reel.style.transform = "";
+    }
+  };
+  reel.addEventListener("pointerup", end);
+  reel.addEventListener("pointercancel", end);
+}
+
+// 끌린 술 목록 (아래에서 올라오는 시트)
+function openLiked(screen) {
+  const liked = state.liked.map((id) => drinkById[id]).filter(Boolean);
+  const sh = document.createElement("div");
+  sh.className = "scrim";
+  sh.innerHTML = `<div class="sheet-m" role="dialog" aria-modal="true" aria-labelledby="lk-t">
+    <div class="grip" aria-hidden="true"></div>
+    <div class="body">
+      <h2 class="t-tl" id="lk-t">끌린 술 ${liked.length}잔</h2>
+      ${liked.length ? `<p class="t-bm c-v">누르면 맛 카드로 가요.</p>
+        ${liked.map((d) => `<a class="liked-row press" href="#/card/${d.id}">${drinkArt(d, 44, 58)}
+          <span class="t"><p class="t-ts">${esc(d.name)}</p><p class="t-bs c-p">“${esc(d.oneLine)}”</p></span>
+          <span class="c-p" style="display:grid">${icon.heart(true, 20)}</span></a>`).join("")}
+        <a class="btn btn-p" href="#/nearby" style="margin-top:8px">끌린 술 맛보러 가기</a>`
+      : `<p class="t-bl c-v" style="padding:16px 0">아직 없어요. 피드에서 끌려요를 누르면 여기에 모여요.</p>`}
+    </div></div>`;
+  screen.append(sh);
+  buzz(6);
+  sh.addEventListener("click", (e) => { if (e.target === sh || e.target.closest("a")) sh.remove(); });
+}
+
+/* ---------- B. 맛 카드 ---------- */
 function card({ parts }) {
   ensureRecs();
   const d = drinkById[parts[1]];
   if (!d) { go("#/feed", { replace: true }); return null; }
-  const ex = explain(d, state.answers);
-  const revs = reviewsFor(d.id);
-  const top = topChip(revs);
-  const pours = poursFor(d.id);
-  const cheapest = pours.slice().sort((a, b) => a.price - b.price)[0];
-  const near = new Set(pours.filter((p) => minutes(p.bar.distance) <= 10).map((p) => p.bar.id)).size;
-  const mode = state.answers.q3;
-  const liked = state.liked.includes(d.id);
-  const country = d.origin.split(" ")[0];
-  const sense = (k, c, v) => `<div class="sense"><i style="background:${c}">${k}</i><span>${esc(v)}</span></div>`;
-  const make = (k, title, sub) => `<div class="make"><span class="tag">${k}</span><b>${esc(title)}</b>${sub ? `<small>${esc(sub)}</small>` : ""}</div>`;
-
-  const deep = () => {
-    if (depth < 2) return "";
-    return `<div class="deep">
-      <p style="margin-bottom:8px">맛 점수 (팀 기준 1~5)</p>
-      ${AXES.map((a) => `<div class="bar-row"><span>${AXIS_LABEL[a]}</span><span class="track"><span class="fill" style="display:block;width:${d.taste[a] * 20}%"></span></span><span>${d.taste[a]}</span></div>`).join("")}
-      <p class="src">산지 ${esc(d.origin)} · 도수 ${esc(d.abvLabel)}<br>${d.verified ? "출처 확인 완료" : "사실 정보는 팀 확인 전 초안이에요"}${d.sourceUrl ? ` · <a href="${esc(d.sourceUrl)}" target="_blank" rel="noopener" style="color:inherit">출처</a>` : ""}</p>
-    </div>`;
-  };
-  const backBody = () => `
-    ${make("원료", d.ingredients, depth >= 1 ? d.glossary : "")}
-    ${make("제조", d.process, "")}
-    ${make("숙성", d.aging, "")}`;
-
-  const reviewList = revs.length
-    ? revs.map((r) => `<div class="review"><div class="meta">
-        ${r.sample ? `<span class="tag">직접 맛봄</span>` : `<span class="tag mine">내 후기 · 직접 맛봄</span>`}
-        <span>${esc(r.reaction)}</span><span>· ${r.chips.map(esc).join(", ")}</span></div>
-        ${r.text ? esc(r.text) : ""}</div>`).join("")
-    : `<p class="empty">아직 직접 맛본 후기가 없어요.<br>근처에서 맛보고 첫 후기를 남겨주세요.</p>`;
-
-  const ctaClass = mode === "home" ? "btn-secondary" : "btn-primary";
-  const fromFeed = location.hash.startsWith("#/feed") || (nav.prevHash() || "").startsWith("#/feed");
-  return {
-    html: `<section class="screen card-screen" style="background:${drinkColor(d)}">
-      <div class="card-top">
-        <button class="icon-btn" data-back aria-label="뒤로">${I.back}</button><span>${fromFeed ? "피드로 돌아가기" : "돌아가기"}</span>
-        <span class="spacer"></span>
-        <button class="icon-btn" data-like aria-pressed="${liked}" aria-label="끌려요" style="color:${liked ? "var(--ruby)" : "inherit"}">${liked ? I.heart.replace('fill="none"', 'fill="currentColor"') : I.heart}</button>
-      </div>
-      <div class="scroll">
-        <div class="flip" id="flip" data-noswipe>
-          <div class="flip-inner">
-            <div class="face front" role="button" tabindex="0" aria-label="카드 뒤집기">
-              <span class="tag" style="background:${drinkColor(d)}">${esc(shortName(d))} · ${esc(country)} ${esc(d.category)} ${esc(abvShort(d))}</span>
-              <h1 class="h1">${esc(d.oneLine)}</h1>
-              ${sense("향", "var(--c-fruit)", d.aroma)}
-              ${sense("맛", "var(--c-grain)", d.flavor)}
-              ${sense("느낌", "var(--c-citrus)", d.feel)}
-              <div class="box compare"><p class="label">내가 아는 술과 비교하면</p>${esc(d.vsSoju)}</div>
-              <div class="box why"><p class="label">왜 나에게 맞을까요?</p>${ex.why.map(esc).join(" ")}<p class="risk">${esc(ex.risk[0])}</p></div>
-              <p class="proof"><span class="dot">${I.check}</span>${revs.length ? `직접 맛본 후기 ${revs.length}개${top ? ` · '${esc(top)}'가 가장 많아요` : ""}` : "아직 직접 맛본 후기가 없어요"}</p>
-              <p class="flip-hint">${I.flip} 카드를 탭하면 원료와 만드는 방법이 보여요</p>
-            </div>
-            <div class="face back" role="button" tabindex="0" aria-label="카드 뒤집기">
-              <span class="tag">뒷면 · 만드는 이야기</span>
-              <h2 class="h2">${esc(d.name)}</h2>
-              <div id="backBody">${backBody()}</div>
-              <div class="depth" data-noflip>
-                <label for="depth">정보 깊이</label>
-                <input id="depth" type="range" min="0" max="2" step="1" value="${depth}">
-                <div class="ends"><span>쉽게</span><span>전문가처럼</span></div>
-              </div>
-              <div id="deep">${deep()}</div>
-              <p class="flip-hint" style="color:inherit;opacity:.7">${I.flip} 탭하면 앞면으로</p>
-            </div>
-          </div>
-        </div>
-        <div class="reviews"><p class="section-title" style="margin-top:0">직접 맛본 후기</p>${reviewList}</div>
-      </div>
-      <div class="bottom">
-        <a class="btn ${ctaClass}" href="#/nearby/${d.id}">근처에서 한 잔 맛보기</a>
-        <p class="cta-sub">${cheapest ? `${cheapest.ml}mL ${won(cheapest.price)}부터 · 걸어서 10분 이내 ${near}곳` : "아직 맛볼 수 있는 곳이 없어요"}</p>
-      </div>
-    </section>`,
-    mount(el) {
-      const flip = el.querySelector("#flip");
-      const inner = flip.querySelector(".flip-inner");
-      // The angle keeps growing (0, 180, 360...) so every flip turns the same way as the finger.
-      let angle = 0;
-      const setAngle = (a, smooth = true) => {
-        inner.style.transition = smooth ? "" : "none";
-        inner.style.transform = `rotateY(${a}deg)`;
-      };
-      const settleFlip = () => {
-        flip.classList.toggle("flipped", Math.round(angle / 180) % 2 !== 0);
-        setAngle(angle);
-      };
-      const toggle = () => { angle += 180; settleFlip(); buzz(6); };
-      let fd = null;
-      flip.addEventListener("pointerdown", (e) => {
-        if (e.target.closest("[data-noflip], a") || (e.pointerType === "mouse" && e.button !== 0)) return;
-        fd = { id: e.pointerId, x: e.clientX, y: e.clientY, on: false };
-      });
-      flip.addEventListener("pointermove", (e) => {
-        if (!fd || e.pointerId !== fd.id) return;
-        const dx = e.clientX - fd.x;
-        const dy = e.clientY - fd.y;
-        if (!fd.on) {
-          if (Math.hypot(dx, dy) < 10) return;
-          if (Math.abs(dx) < Math.abs(dy) * 1.2) { fd = null; return; }
-          fd.on = true;
-          try { flip.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
-        }
-        setAngle(angle + Math.max(-180, Math.min(180, dx * 0.6)), false);
-      });
-      const flipEnd = (e) => {
-        if (!fd || e.pointerId !== fd.id) return;
-        const { on, x } = fd;
-        fd = null;
-        if (!on) return;
-        swallowClick(flip);
-        const turned = (e.clientX - x) * 0.6;
-        if (e.type !== "pointercancel" && Math.abs(turned) > 50) { angle += turned < 0 ? -180 : 180; buzz(6); }
-        settleFlip();
-      };
-      flip.addEventListener("pointerup", flipEnd);
-      flip.addEventListener("pointercancel", flipEnd);
-      el.querySelectorAll(".face").forEach((f) => {
-        f.addEventListener("click", (e) => { if (!e.target.closest("[data-noflip], a")) toggle(); });
-        f.addEventListener("keydown", (e) => { if ((e.key === "Enter" || e.key === " ") && e.target === f) { e.preventDefault(); toggle(); } });
-      });
-      el.querySelector("#depth").addEventListener("input", (e) => {
-        depth = Number(e.target.value);
-        el.querySelector("#backBody").innerHTML = backBody();
-        el.querySelector("#deep").innerHTML = deep();
-      });
-      el.querySelector("[data-back]").onclick = () => back();
-      const likeBtn = el.querySelector("[data-like]");
-      likeBtn.onclick = () => {
-        const on = !state.liked.includes(d.id);
-        setFeedback(d.id, on ? true : null);
-        if (on) {
-          toast("끌린 맛을 다음 추천에 반영할게요");
-          burst(likeBtn, app);
-          buzz(12);
-        }
-        likeBtn.setAttribute("aria-pressed", on);
-        likeBtn.style.color = on ? "var(--ruby)" : "inherit";
-        likeBtn.innerHTML = on ? I.heart.replace('fill="none"', 'fill="currentColor"') : I.heart;
-        pop(likeBtn, on ? 1.3 : 0.85);
-      };
-    },
-  };
-}
-
-/* ---------- C. nearby, bar, review ---------- */
-const PIN_POS = { B1: [62, 64], B2: [28, 47], B3: [80, 34], B4: [47, 26] };
-const filters = { small: true, open: false, fresh: false };
-// 주종 필터 (하나만 고름). 특정 술을 고르지 않아도 '와인 있는 곳'처럼 바를 찾을 수 있다.
-let nearbyCat = null;
-const NEARBY_CATS = () => [...new Set(BARS.flatMap((b) => b.pours.map((p) => drinkById[p.drinkId]?.category)).filter(Boolean))];
-let sheetSnap = "mid";
-
-function nearby({ parts }) {
-  const d = parts[1] ? drinkById[parts[1]] : null;
-  const cat = d ? null : nearbyCat === LIKED && !state.liked.length ? null : nearbyCat;
-  const passes = (p) => (!filters.small || p.ml <= 30) && (!filters.fresh || p.openedDays <= 3) && (!filters.open || openNow(p.bar.hours))
-    && (!cat || (cat === LIKED ? state.liked.includes(p.drinkId) : drinkById[p.drinkId]?.category === cat));
-  const catName = cat === LIKED ? "끌린 술" : cat;
-  const list = BARS.map((b) => {
-    const pours = b.pours.map((p) => ({ ...p, bar: b })).filter((p) => (!d || p.drinkId === d.id) && passes(p));
-    return { b, pours };
-  }).filter((x) => x.pours.length).sort((a, b) => minutes(a.b.distance) - minutes(b.b.distance));
-
-  const map = `<svg class="streets" viewBox="0 0 390 760" preserveAspectRatio="xMidYMin slice" aria-hidden="true">
-    <rect width="390" height="760" fill="#F4E6CC"/>
-    <path d="M250 0 C220 160 300 300 240 440 S200 600 230 760 L300 760 C270 600 280 500 310 420 S300 160 320 0z" fill="#B9DDEB"/>
-    <rect x="0" y="330" width="90" height="170" rx="14" fill="#C5E3A9"/>
-    <g stroke="#FFFDF8" stroke-width="14" fill="none" stroke-linecap="round">
-      <path d="M-10 250 L400 210"/><path d="M60 -10 L120 770"/><path d="M180 -10 L170 770"/><path d="M-10 470 L400 420"/><path d="M300 -10 L390 220"/>
-    </g>
-    <g stroke="#FFFDF8" stroke-width="6" fill="none"><path d="M0 130 L390 100"/><path d="M240 220 L260 770"/><path d="M0 620 L180 340"/></g>
-  </svg>`;
-  const pins = BARS.map((b) => {
-    const hit = list.find((x) => x.b.id === b.id);
-    const [x, y] = PIN_POS[b.id] || [50, 50];
-    const min = hit ? hit.pours.slice().sort((a, c) => a.price - c.price)[0] : null;
-    return `<button class="pin ${hit ? "" : "dim"}" style="left:${x}%" data-y="${y}" data-bar="${b.id}" aria-label="${esc(b.name)}">
-      ${hit ? `<span class="tagp">${d || cat ? `${won(min.price)}~` : esc(b.name)}</span>` : ""}${I.mapPin(hit ? "#F9BAA6" : "#FFFDF8")}</button>`;
-  }).join("");
-
-  const items = list.map(({ b, pours }) => {
-    const p = pours.slice().sort((a, c) => a.price - c.price)[0];
-    return `<button class="bar-item" data-bar="${b.id}">
-      <span class="sw" style="background:${BAR_COLOR[b.id]}"></span>
-      <span><b>${esc(b.name)}</b><small>${esc(b.area.split(" ").at(-1))} · ${esc(b.distance)}</small></span>
-      <span class="price">${d ? `${p.ml}mL ${won(p.price)}` : cat ? `${esc(catName)} ${new Set(pours.map((x) => x.drinkId)).size}종` : `${pours.length}종`}<small>${d ? `개봉 ${p.openedDays}일째` : `${won(p.price)}부터`}</small></span>
-    </button>`;
-  }).join("");
-
-  return {
-    html: `<section class="screen nearby-screen">
-      <div class="map">${map}${pins}<span class="me" data-y="82" aria-label="내 위치"></span>
-        <div class="search">${I.search}<span>내 주변 · ${d ? `${esc(shortName(d))} 한 잔` : cat ? `${esc(catName)} 한 잔` : "한 잔 할 수 있는 곳"}</span>
-          ${d ? `<a href="#/nearby" style="margin-left:auto;color:var(--muted)" aria-label="술 선택 해제">${I.x.replace("<svg", '<svg width="16" height="16"')}</a>` : ""}</div>
-        <div class="filters cats" role="radiogroup" aria-label="주종">
-          <button class="chip" data-cat="" role="radio" aria-checked="${!d && !cat}">전체</button>
-          ${state.liked.length ? `<button class="chip" data-cat="${LIKED}" role="radio" aria-checked="${cat === LIKED}">♥ 끌린 술</button>` : ""}
-          ${NEARBY_CATS().map((c) => `<button class="chip" data-cat="${esc(c)}" role="radio" aria-checked="${cat === c}">${esc(c)}</button>`).join("")}
-        </div>
-        <div class="filters">
-          <button class="chip" data-f="small" aria-pressed="${filters.small}">10~30mL 소량</button>
-          <button class="chip" data-f="open" aria-pressed="${filters.open}">지금 영업중</button>
-          <button class="chip" data-f="fresh" aria-pressed="${filters.fresh}">개봉 3일 이내</button>
-        </div>
-      </div>
-      <div class="sheet">
-        <div class="sheet-head" role="button" tabindex="0" aria-label="목록 펼치기 접기"><div class="grip"></div>
-          <p class="section-title" style="margin:0">${list.length ? `근처 ${list.length}곳에서 맛볼 수 있어요` : "조건에 맞는 곳이 없어요"}</p></div>
-        <div class="sheet-body">${items || `<p class="empty">필터를 줄여보세요.</p>`}</div>
-      </div>
-      ${tabbar("nearby")}
-    </section>`,
-    mount(el) {
-      el.querySelectorAll("[data-f]").forEach((b) => (b.onclick = () => { filters[b.dataset.f] = !filters[b.dataset.f]; buzz(5); render(); }));
-      el.querySelectorAll("[data-cat]").forEach((b) => (b.onclick = () => {
-        nearbyCat = b.dataset.cat || null;
-        buzz(5);
-        // 특정 술로 들어와 있었다면 그 선택을 풀고 주종 기준으로 바꾼다.
-        if (d) go("#/nearby", { replace: true }); else render();
-      }));
-
-      // Bottom sheet with three resting heights. Drag the head, or tap it to switch.
-      const sheet = el.querySelector(".sheet");
-      const head = el.querySelector(".sheet-head");
-      const avail = () => el.clientHeight - el.querySelector(".tabbar").offsetHeight;
-      const snaps = () => ({ full: 170, mid: Math.round(el.clientHeight * 0.44), low: avail() - 88 });
-      const place = (y, smooth) => {
-        sheet.style.transition = smooth ? `top .34s ${EASE}` : "none";
-        sheet.style.top = `${y}px`;
-      };
-      place(snaps()[sheetSnap], false);
-      // Keep pins in the band that stays visible above the sheet at its middle height.
-      const band = [222, snaps().mid - 24];
-      el.querySelectorAll("[data-y]").forEach((p) => {
-        p.style.top = `${band[0] + ((Number(p.dataset.y) - 20) / 65) * (band[1] - band[0])}px`;
-      });
-      let sd = null;
-      head.addEventListener("pointerdown", (e) => {
-        sd = { id: e.pointerId, y: e.clientY, top: sheet.offsetTop, ly: e.clientY, lt: e.timeStamp, v: 0, moved: false };
-        try { head.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
-      });
-      head.addEventListener("pointermove", (e) => {
-        if (!sd || e.pointerId !== sd.id) return;
-        const dy = e.clientY - sd.y;
-        if (Math.abs(dy) > 4) sd.moved = true;
-        const s = snaps();
-        place(Math.min(s.low + 30, Math.max(s.full - 30, sd.top + dy)), false);
-        const dt = e.timeStamp - sd.lt;
-        if (dt > 0) sd.v = 0.7 * ((e.clientY - sd.ly) / dt) + 0.3 * sd.v;
-        sd.ly = e.clientY;
-        sd.lt = e.timeStamp;
-      });
-      const sheetEnd = (e) => {
-        if (!sd || e.pointerId !== sd.id) return;
-        const { moved, v } = sd;
-        sd = null;
-        const s = snaps();
-        if (!moved) sheetSnap = sheetSnap === "mid" ? "full" : "mid";
-        else {
-          const aim = sheet.offsetTop + v * 160;
-          sheetSnap = Object.entries(s).sort((a, b) => Math.abs(a[1] - aim) - Math.abs(b[1] - aim))[0][0];
-        }
-        place(s[sheetSnap], true);
-        buzz(5);
-      };
-      head.addEventListener("pointerup", sheetEnd);
-      head.addEventListener("pointercancel", sheetEnd);
-      head.addEventListener("keydown", (e) => {
-        if (e.key !== "Enter" && e.key !== " ") return;
-        e.preventDefault();
-        sheetSnap = sheetSnap === "mid" ? "full" : "mid";
-        place(snaps()[sheetSnap], true);
-      });
-      el.querySelectorAll("[data-bar]").forEach((b) => (b.onclick = () => go(`#/bar/${b.dataset.bar}${d ? `?drink=${d.id}` : ""}`)));
-    },
-  };
-}
-
-let going = false;
-function bar({ parts, q }) {
-  const b = barById[parts[1]];
-  if (!b) { go("#/nearby", { replace: true }); return null; }
-  const focus = q.get("drink");
-  const groups = {};
-  b.pours.forEach((p) => (groups[p.drinkId] ||= []).push(p));
-  const ids = Object.keys(groups).sort((a, c) => (a === focus ? -1 : c === focus ? 1 : 0));
-  const first = groups[ids[0]];
-  let sel = { drinkId: ids[0], ml: first.filter((p) => p.ml <= 30).sort((a, c) => c.ml - a.ml)[0]?.ml ?? first[0].ml };
-  going = false;
-
-  const pourHTML = (id) => {
-    const d = drinkById[id];
-    const ps = groups[id];
-    const opened = ps[0].openedDays;
-    return `<div class="pour ${sel.drinkId === id ? "focus" : ""}">
-      <div class="pour-head"><span class="d" style="background:${drinkColor(d)}"></span>
-        <a href="#/card/${id}" style="color:inherit">${esc(shortName(d))}</a>
-        <small>개봉 ${opened}일째${opened <= 2 ? " · 신선해요" : ""}${ps.some((p) => p.lastToday) ? " · 오늘 소진 예정" : ""}</small></div>
-      <div class="chips">${ps.map((p) => `<button class="chip" data-d="${id}" data-ml="${p.ml}" aria-pressed="${sel.drinkId === id && sel.ml === p.ml}">${p.ml}mL ${won(p.price)}</button>`).join("")}</div>
-    </div>`;
+  const pos = state.order.indexOf(d.id) + 1;
+  const why = reasonText(d), caution = cautionText(d);
+  const reviews = [...state.reviews.filter((r) => r.drinkId === d.id), ...SAMPLE_REVIEWS.filter((r) => r.drinkId === d.id)];
+  const n = barsFor(d.id).length;
+  const AX = [["sweet", "단맛"], ["sour", "신맛"], ["bitter", "쓴맛"], ["fizz", "탄산"], ["body", "바디감"], ["alc", "알코올 느낌"],
+    ["fruit", "과일"], ["flower", "꽃"], ["grain", "곡물"], ["wood", "나무"], ["smoke", "연기"], ["herb", "허브"]];
+  const fbRow = () => {
+    const like = state.liked.includes(d.id), pass = state.passed.includes(d.id);
+    return `<button class="fb-text" data-like aria-pressed="${like}" aria-label="${esc(d.name)} 끌려요"><span class="ic">${icon.heart(like, 20)}</span>끌려요</button><span class="sep"></span>
+      <button class="fb-text" data-pass aria-pressed="${pass}" aria-label="${esc(d.name)} 패스"><span class="ic">${icon.cross(20, 22)}</span>패스</button>`;
   };
   return {
     html: `<section class="screen">
-      <div class="bar-hero" style="background:${BAR_COLOR[b.id]}">
-        <span class="shape" style="width:220px;height:220px;right:-40px;top:-60px;background:rgba(255,253,248,.45)"></span>
-        <span class="shape" style="width:160px;height:160px;left:40px;bottom:-90px;background:rgba(92,51,23,.12)"></span>
-        <button class="icon-btn" data-back aria-label="뒤로">${I.back}</button>
-      </div>
-      <div class="scroll pad">
-        <h1 class="h2" style="font-size:24px">${esc(b.name)} · ${esc(b.area.split(" ").at(-1).replace("동", ""))}</h1>
-        <p class="sub">${esc(b.area)} · ${esc(b.distance)} · 오늘 ${esc(b.hours)} ${openNow(b.hours) ? "· 영업중" : "· 영업 전"}</p>
-        <p class="section-title">지금 맛볼 수 있는 잔</p>
-        <div id="pours">${ids.map(pourHTML).join("")}</div>
-        <div id="going"></div>
-      </div>
-      <div class="bottom">
-        <div class="btn-row">
-          <button class="btn btn-secondary" data-go>길 찾기</button>
-          <button class="btn btn-primary" data-reserve>예약하기</button>
+      ${topbar("맛 카드", { backLabel: "추천 피드로 돌아가기", trailing: `<span class="t-bs c-v" style="padding-right:12px">평가용 예시 데이터</span>` })}
+      <div class="scroll"><div class="pad stack" style="gap:24px;padding-bottom:32px">
+        <div class="row gap16">${drinkArt(d, 104, 140)}
+          <div class="stack gap4"><p class="t-ll c-p">${pos ? `피드 ${pos}번째 잔` : esc(d.category)}</p>
+            <h2 class="t-hl" style="font-size:24px;line-height:32px">${esc(d.name)}</h2>
+            <p class="t-bm c-v">${esc(d.category)} · ${esc(d.abvLabel)}</p></div></div>
+        <p class="t-tm c-p" style="font-weight:500">“${esc(d.oneLine)}”</p>
+        <div class="card stack gap12"><h3 class="t-tm">한눈에 보는 맛</h3>
+          ${infoRow("향", d.aroma)}${infoRow("맛", d.flavor)}${infoRow("느낌", d.feel)}${infoRow("비교", d.vsSoju)}</div>
+        <div class="card-pc stack gap4"><p class="t-ll c-p">왜 나에게 맞을까요?</p>
+          <p class="t-bl c-pc">${esc(why)}</p>${caution ? `<p class="t-bm c-v">참고: ${esc(caution)}</p>` : ""}</div>
+        <div class="card expand" style="padding:0" data-open="false">
+          <button class="expand-head" data-toggle aria-expanded="false">
+            <span class="grow stack"><span class="t-tm">더 자세히 알아보기</span><span class="t-bm c-v">원료 · 만드는 법 · 맛 점수</span></span>
+            <span class="chev">${icon.chevronDown()}</span></button>
+          <div class="expand-body"><div><div class="expand-inner"><hr>
+            ${infoRow("원산지", d.origin)}${infoRow("도수", d.abvLabel)}${infoRow("원료", d.ingredients)}${infoRow("만드는 법", d.process)}
+            ${infoRow("숙성", d.aging)}${infoRow("용어 풀이", d.glossary)}
+            <p class="t-ll c-v" style="margin-top:4px">맛·향 강도 (0~5)</p>
+            ${AX.map(([k, l]) => `<div class="score" role="img" aria-label="${l} 5점 중 ${d.taste[k]}점"><span>${l}</span>
+              <span class="cells">${[1, 2, 3, 4, 5].map((x) => `<i class="${x <= d.taste[k] ? "on" : ""}"></i>`).join("")}</span><span>${d.taste[k]}</span></div>`).join("")}
+            <p class="t-bs c-v">${d.verified ? "샘플 데이터의 확인 표시가 있는 항목이에요." : "사실 정보는 팀 확인 전 초안이에요. 제품별로 다를 수 있어요."}</p>
+          </div></div></div>
         </div>
-        <p class="note">주문과 결제는 매장에서 해요</p>
+        <div class="stack gap8">
+          <h3 class="t-tm">맛본 사람들의 후기 ${reviews.length}</h3>
+          ${reviews.length ? reviews.slice(0, 4).map((r) => `<div class="review"><p class="t-ll c-p">${esc(r.reaction)}${r.chips?.length ? ` · ${esc(r.chips.join(", "))}` : ""}</p>
+            ${r.text ? `<p class="t-bm" style="margin-top:2px">${esc(r.text)}</p>` : ""}${r.sample ? "" : `<p class="t-bs c-v" style="margin-top:2px">내가 남긴 후기</p>`}</div>`).join("")
+          : `<p class="t-bm c-v">아직 후기가 없어요. 맛보고 첫 후기를 남겨 주세요.</p>`}
+        </div>
+      </div></div>
+      <div class="bottom" style="padding-top:8px;padding-bottom:calc(8px + env(safe-area-inset-bottom))">
+        <div class="fb-text-row" data-fb>${fbRow()}</div>
+        ${n ? `<a class="btn btn-p" href="#/nearby/${d.id}">이 술을 맛볼 수 있는 곳</a>` : `<button class="btn btn-s" data-back2>다른 맛 찾아보기</button>`}
       </div>
     </section>`,
     mount(el) {
-      el.querySelector("[data-back]").onclick = () => back("#/nearby");
-      const bindChips = () => el.querySelectorAll("[data-ml]").forEach((c) => (c.onclick = () => {
-        sel = { drinkId: c.dataset.d, ml: Number(c.dataset.ml) };
-        el.querySelector("#pours").innerHTML = ids.map(pourHTML).join("");
-        bindChips();
-        if (going) showGoing();
-      }));
-      bindChips();
-      const showGoing = () => {
-        const d = drinkById[sel.drinkId];
-        el.querySelector("#going").innerHTML = `<div class="going"><b>${esc(b.name)}로 가는 중이에요</b><br>
-          실제 서비스에서는 지도 앱으로 길을 안내해요. ${esc(shortName(d))} ${sel.ml}mL를 맛본 뒤 아래 버튼으로 후기를 남겨주세요.</div>`;
+      bindBack(el);
+      el.querySelector("[data-back2]")?.addEventListener("click", () => back());
+      const ex = el.querySelector(".expand");
+      el.querySelector("[data-toggle]").onclick = (e) => {
+        const open = ex.dataset.open !== "true";
+        ex.dataset.open = open;
+        e.currentTarget.setAttribute("aria-expanded", open);
       };
-      // 평가용 예약: 실제로 예약되지는 않고 '예약 완료' 알림만 띄운다.
-      const reserveBtn = el.querySelector("[data-reserve]");
-      reserveBtn.onclick = () => {
-        if (reserveBtn.dataset.done) return;
-        const d = drinkById[sel.drinkId];
-        const pour = groups[sel.drinkId].find((p) => p.ml === sel.ml);
-        const pop = document.createElement("div");
-        pop.className = "modal";
-        pop.innerHTML = `<div class="modal-card" role="alertdialog" aria-modal="true" aria-labelledby="rsv-t">
-          <span class="ok">${I.check}</span>
-          <h2 id="rsv-t" class="h2">예약 완료!</h2>
-          <p class="sub" style="margin-top:8px">${esc(b.name)} · ${esc(shortName(d))} ${sel.ml}mL${pour ? ` · ${won(pour.price)}` : ""}<br>오늘 ${esc(b.hours.split("~")[0])} 이후 방문하면 바로 준비해 드려요.</p>
-          <p style="margin-top:10px;font-size:12px;color:var(--muted)">평가용 화면이라 실제 예약은 되지 않아요</p>
-          <button class="btn btn-primary" data-ok style="margin-top:16px">확인</button>
-        </div>`;
-        el.append(pop);
-        buzz(12);
-        const ok = pop.querySelector("[data-ok]");
-        ok.focus();
-        ok.onclick = () => pop.remove();
-        pop.addEventListener("click", (e) => { if (e.target === pop) pop.remove(); });
-        reserveBtn.dataset.done = "1";
-        reserveBtn.textContent = "예약됨 ✓";
-        reserveBtn.setAttribute("aria-disabled", "true");
-        state.reservations = [...(state.reservations || []), { barId: b.id, drinkId: sel.drinkId, ml: sel.ml, at: Date.now() }];
-        save();
+      const row = el.querySelector("[data-fb]");
+      const bindFb = () => {
+        row.querySelector("[data-like]").onclick = () => {
+          const on = !state.liked.includes(d.id);
+          setFeedback(d.id, on ? true : null);
+          feedDirty = true;
+          if (on) { buzz(12); toast("끌린 맛을 다음 추천에 반영할게요"); } else toast("끌려요를 취소했어요");
+          row.innerHTML = fbRow(); bindFb();
+        };
+        row.querySelector("[data-pass]").onclick = () => {
+          const on = !state.passed.includes(d.id);
+          setFeedback(d.id, on ? false : null);
+          feedDirty = true;
+          toast(on ? "비슷한 맛은 뒤로 미룰게요" : "패스를 취소했어요");
+          row.innerHTML = fbRow(); bindFb();
+        };
       };
-      el.querySelector("[data-go]").onclick = (e) => {
-        if (!going) {
-          going = true;
-          showGoing();
-          e.currentTarget.textContent = "맛보고 왔어요, 후기 남기기";
-          el.querySelector(".scroll").scrollTo({ top: 9999, behavior: "smooth" });
-        } else {
-          go(`#/review/${sel.drinkId}?bar=${b.id}&ml=${sel.ml}`);
-        }
-      };
+      bindFb();
     },
   };
 }
 
+/* ---------- C. 근처에서 한 모금 ---------- */
+let nearbyCat = null;
+function mapHTML(highlight, drinkId) {
+  const maxMin = Math.max(...BARS.map(minutesOf), 1);
+  const angles = [-38, 200, 128, 24];
+  const R = 100 - 26; // 지도 높이(200)의 절반에서 26을 뺀 반지름
+  const pins = BARS.map((b, i) => {
+    const a = (angles[i % 4] * Math.PI) / 180;
+    const r = R * (minutesOf(b) / maxMin);
+    const x = r * Math.cos(a), y = r * Math.sin(a) - 14;
+    const on = highlight.has(b.id);
+    return `<a class="pin ${on ? "on" : ""}" href="#/bar/${b.id}${drinkId ? `?drink=${drinkId}` : ""}" style="left:calc(50% + ${x.toFixed(1)}px);top:calc(50% + ${y.toFixed(1)}px)"
+      aria-label="${esc(b.name)}, ${esc(b.distance)}${on ? "" : ", 지금 조건과 안 맞음"}">${icon.mapPin(on ? 26 : 20, on ? C.primary : C.outline)}<span>${esc(b.name)}</span></a>`;
+  }).join("");
+  return `<div class="map">
+    <svg class="ground" viewBox="0 0 400 200" preserveAspectRatio="none" aria-hidden="true">
+      <path d="M0 164C120 140 220 200 400 172V200H0Z" fill="#DDE7EE"/>
+      <rect x="28" y="20" width="72" height="52" rx="9" fill="#E3EBDD"/>
+      <g stroke="#fff"><path d="M0 96L400 84" stroke-width="6"/><path d="M184 0L216 200" stroke-width="6"/>
+        <path d="M60 200L328 0" stroke-width="3.6"/><path d="M288 96L400 144" stroke-width="3.6"/></g>
+    </svg>
+    <svg class="ground" viewBox="-50 -50 100 100" preserveAspectRatio="xMidYMid meet" style="width:100px;height:100px;left:calc(50% - 50px);top:calc(50% - 50px)" aria-hidden="true">
+      <circle class="me-pulse" r="5.3" fill="${C.primary}" fill-opacity=".25"/>
+      <circle r="5" fill="#fff"/><circle r="3.4" fill="#2F6FDB"/>
+    </svg>
+    <span class="me-label" aria-hidden="true">나</span>
+    ${pins}
+    <span class="vm">가상 지도</span>
+  </div>`;
+}
+function barCard(b, drink, cat) {
+  const ms = menusOf(b);
+  const dm = drink ? ms.filter((m) => m.drinkId === drink.id) : [];
+  const hl = dm.length > 0;
+  const matching = cat ? ms.filter((m) => m.drink?.category === cat) : ms;
+  const drinks = drinksOf(b);
+  return `<a class="bar-card press ${hl ? "hl" : ""}" href="#/bar/${b.id}${drink ? `?drink=${drink.id}` : ""}">
+    <div class="row"><div class="grow stack" style="gap:2px"><span class="t-tm">${esc(b.name)}</span><span class="t-bm c-v">${esc(b.area)} · ${esc(b.distance)}</span></div>
+      <span class="c-v" style="display:grid">${icon.chevronRight()}</span></div>
+    ${hl ? `<div class="has-box stack" style="gap:2px"><span class="t-ll c-p">${esc(drink.name)} 있어요</span>
+      <span class="t-bl" style="font-weight:500">${dm.map((m) => `${m.ml}mL ${won(m.price)}`).join("  ·  ")}</span></div>` : ""}
+    <div class="arts">${drinks.slice(0, 5).map((x) => drinkArt(x, 40, 52)).join("")}${drinks.length > 5 ? `<span class="t-ll c-v">+${drinks.length - 5}</span>` : ""}</div>
+    <p class="t-bm c-v">${catsOf(b).join("·")} · ${drinks.length}종${!hl && matching.length !== ms.length ? ` (조건에 맞는 메뉴 ${matching.length}개)` : ""} · ${volRange(ms)} · ${priceRange(ms)}</p>
+  </a>`;
+}
+function drinkChip(d, label, n, liked = false) {
+  return `<button class="drink-chip press" data-drink="${d.id}" ${n ? "" : "disabled"} aria-label="${liked ? "끌린 술" : label} ${esc(d.name)}, ${n ? `맛볼 수 있는 곳 ${n}곳` : "맛볼 수 있는 곳 없음"}">
+    ${drinkArt(d, 56, 72)}<span class="nm">${esc(d.name)}</span><span class="t-bs ${n ? "c-p" : "c-v"}">${liked ? "♥" : label} · ${n ? `${n}곳` : "없음"}</span></button>`;
+}
+function nearby({ parts }) {
+  ensureRecs();
+  const drink = parts[1] ? drinkById[parts[1]] : null;
+  const cat = drink ? null : nearbyCat;
+  const list = BARS.filter((b) => (drink ? b.pours.some((p) => p.drinkId === drink.id) : cat ? catsOf(b).includes(cat) : true))
+    .sort((a, b) => minutesOf(a) - minutesOf(b));
+  const hl = new Set(list.map((b) => b.id));
+  const rr = resultRank();
+  const top = rr.slice(0, 5).map((id) => drinkById[id]);
+  const liked = state.liked.map((id) => drinkById[id]).filter(Boolean);
+  const rankOf = drink ? rr.indexOf(drink.id) + 1 : 0;
+  const title = drink ? `맛볼 수 있는 곳 ${list.length}곳` : cat ? `${cat} 있는 곳 ${list.length}곳` : `주변 가상 바 ${list.length}곳`;
+  return {
+    html: `<section class="screen">
+      ${topbar("근처에서 한 모금", { noBack: !drink, backLabel: "이전 화면으로 돌아가기" })}
+      <div class="scroll"><div class="stack" style="gap:16px;padding-bottom:32px">
+        ${drink ? `<div class="pad"><div class="card-pc row gap16">${drinkArt(drink, 60, 80)}
+            <div class="grow stack" style="gap:2px"><span class="t-ll c-p">${rankOf ? `찾는 술 · 추천 ${rankOf}위` : "찾는 술"}</span>
+              <h2 class="t-tm">${esc(drink.name)}</h2><span class="t-bm c-v">${esc(drink.category)} · ${esc(drink.abvLabel)}</span></div>
+            <button class="btn-t" data-other aria-label="다른 술로 찾기. 지금은 ${esc(drink.name)}, ${list.length}곳">다른 술</button></div></div>
+          <div class="pad">${mapHTML(hl, drink.id)}</div>`
+        : `<p class="pad t-bl c-v">한 병이 부담될 때, 10~30mL로 먼저 맛볼 수 있는 곳이에요.</p>
+          <div class="pad">${mapHTML(hl, null)}</div>
+          ${liked.length ? `<div class="stack gap8"><h2 class="pad t-ts">끌린 술로 찾기</h2>
+            <div class="hrow">${liked.map((d) => drinkChip(d, "", barsFor(d.id).length, true)).join("")}</div></div>` : ""}
+          <div class="stack gap8"><h2 class="pad t-ts">내 추천 술로 찾기</h2>
+            <div class="hrow">${top.map((d, i) => drinkChip(d, `${i + 1}위`, barsFor(d.id).length)).join("")}</div></div>
+          <div class="stack gap8"><h2 class="pad t-ts">주종으로 찾기</h2>
+            <div class="hrow" role="tablist" aria-label="주종">
+              <button class="fpill" role="tab" data-cat="" aria-selected="${!cat}">${!cat ? icon.check(16) : ""}전체 ${BARS.length}</button>
+              ${CATEGORIES.map((c) => `<button class="fpill" role="tab" data-cat="${esc(c)}" aria-selected="${cat === c}">${cat === c ? icon.check(16) : ""}${esc(c)} ${BARS.filter((b) => catsOf(b).includes(c)).length}</button>`).join("")}
+            </div></div>`}
+        <div class="pad stack gap4" style="padding-top:8px"><h2 class="t-tm">${title}</h2>${virtualNote()}</div>
+        ${list.length ? list.map((b) => `<div class="pad">${barCard(b, drink, cat)}</div>`).join("")
+        : `<div class="pad"><div class="card empty-card"><h3 class="t-tm">조건에 맞는 가상 바가 없어요</h3>
+            <p class="t-bl">고른 조건을 지우면 가상 바 ${BARS.length}곳을 모두 볼 수 있어요.</p><button class="btn btn-s" data-clear>전체 바 보기</button></div></div>`}
+      </div></div>
+      ${drink ? "" : tabbar("nearby")}
+    </section>`,
+    mount(el) {
+      bindBack(el);
+      el.querySelectorAll("[data-drink]").forEach((b) => (b.onclick = () => go(`#/nearby/${b.dataset.drink}`)));
+      el.querySelectorAll("[data-cat]").forEach((b) => (b.onclick = () => {
+        const c = b.dataset.cat || null;
+        nearbyCat = c && nearbyCat === c ? null : c;
+        buzz(5);
+        const y = el.querySelector(".scroll").scrollTop;
+        const x = b.parentElement.scrollLeft;
+        render();
+        const now = nav.current()?.el;
+        now.querySelector(".scroll").scrollTop = y;
+        const row = now.querySelector('[role="tablist"]');
+        if (row) row.scrollLeft = x;
+      }));
+      el.querySelector("[data-clear]")?.addEventListener("click", () => { nearbyCat = null; render(); });
+      el.querySelector("[data-other]")?.addEventListener("click", () => { nearbyCat = null; back("#/nearby"); });
+    },
+  };
+}
+
+/* ---------- C. 바 정보 ---------- */
+const barSel = {}; // 바마다 고른 메뉴를 기억한다
+const barExpanded = new Set();
+function bar({ parts, q }) {
+  ensureRecs();
+  const b = barById[parts[1]];
+  if (!b) { go("#/nearby", { replace: true }); return null; }
+  const ms = menusOf(b);
+  const want = q.get("drink");
+  if (want && menuById(barSel[b.id] || "")?.drinkId !== want) barSel[b.id] = ms.find((m) => m.drinkId === want)?.id || null;
+  const focus = want ? drinkById[want] : null;
+  const menuCard = (m) => {
+    const d = m.drink;
+    const sel = barSel[b.id] === m.id;
+    const exp = barExpanded.has(m.id);
+    const why = d ? reasonText(d) : "";
+    return `<div class="menu" aria-checked="${sel}" data-expanded="${exp}" data-menu="${m.id}">
+      <button class="pick" role="radio" aria-checked="${sel}" data-pick="${m.id}">
+        ${d ? drinkArt(d, 48, 64) : ""}
+        <span class="grow stack" style="gap:2px"><span class="t-ts" style="font-weight:500">${esc(d?.name || m.drinkId)}</span>
+          <span class="t-bs c-v">${esc(d?.category || "주류")} · ${esc(d?.abvLabel || "도수 정보 없음")}</span>
+          <span class="t-ll c-p">${m.ml}mL · ${won(m.price)}</span></span>
+        <span class="ring ${sel ? "on" : ""}" aria-hidden="true" style="width:22px;height:22px"><i></i></span>
+      </button>
+      <div class="more"><div><div class="more-in">
+        ${d ? `<p class="t-bl c-p">“${esc(d.oneLine)}”</p>` : ""}
+        <p class="t-bs c-v">${volNote(m)} · ${openedLabel(m)}</p>
+        <p class="t-bs c-v">${statusNote(m)}</p>
+        ${ABV_NOTE[m.drinkId] ? `<p class="note-box">${ABV_NOTE[m.drinkId]}</p>` : ""}
+        <button class="btn-t" data-exp="${m.id}" style="align-self:flex-start;padding:0">${exp ? "간단히 보기" : "원료·만드는 법 자세히"}</button>
+        <div class="detail">${d ? `${infoRow("원산지", d.origin, true)}${infoRow("향", d.aroma, true)}${infoRow("맛", d.flavor, true)}${infoRow("느낌", d.feel, true)}
+          ${infoRow("비교", d.vsSoju, true)}${infoRow("원료", d.ingredients, true)}${infoRow("만드는 법", d.process, true)}${infoRow("숙성", d.aging, true)}
+          ${infoRow("용어 풀이", d.glossary, true)}${infoRow("주의", d.caution, true)}${why ? infoRow("추천 이유", why, true) : ""}
+          <p class="t-bs c-v">${d.verified ? "출처 확인이 끝난 샘플 데이터예요." : "술 정보는 팀 확인 전 초안이고, 바·가격·개봉일은 평가용 가상 데이터예요."}</p>` : ""}</div>
+      </div></div></div>
+    </div>`;
+  };
+  const reserved = () => (state.reservations || []).some((r) => r.menuId === barSel[b.id]);
+  const footer = () => {
+    const m = barSel[b.id] ? menuById(barSel[b.id]) : null;
+    return `<p class="t-bm c-v" aria-live="polite" style="margin-bottom:8px">${m ? `${esc(m.drink?.name)} · ${m.ml}mL · 예시 ${won(m.price)}` : "메뉴를 골라 주세요"}</p>
+      <div class="btns"><button class="btn btn-s" data-reserve style="flex:1" ${m ? "" : "disabled"} ${m && reserved() ? 'aria-disabled="true"' : ""}>${m && reserved() ? "예약됨 ✓" : "예약하기"}</button>
+      <button class="btn btn-p" data-try style="flex:2" ${m ? "" : "disabled"}>${m ? `${m.ml}mL 맛보기 체험` : "메뉴를 골라 주세요"}</button></div>`;
+  };
+  const focusMenu = focus && barSel[b.id] && menuById(barSel[b.id])?.drinkId === focus.id;
+  return {
+    html: `<section class="screen">
+      ${topbar("바 정보", { backLabel: "주변 바 목록으로 돌아가기" })}
+      <div class="scroll"><div class="pad stack" style="gap:24px;padding-bottom:32px">
+        <div class="stack gap8">
+          <h2 class="t-hl" style="font-size:26px;line-height:34px">${esc(b.name)}</h2>
+          <p class="t-bl c-v">${esc(b.area)} · ${esc(b.distance)} · ${esc(b.hours)}</p>
+          <div class="row gap4" style="flex-wrap:wrap">${catsOf(b).map((c) => `<span class="tag">${esc(c)}</span>`).join("")}<span class="tag">${volRange(ms)}</span><span class="tag">${priceRange(ms)}</span></div>
+          ${virtualNote()}
+        </div>
+        ${focusMenu ? `<div class="card-pc stack gap8"><p class="t-ll c-p">찾던 술이 있어요</p>
+          <div class="row gap12">${drinkArt(focus, 48, 64)}<div class="grow stack" style="gap:2px"><span class="t-tm">${esc(focus.name)}</span>
+            <span class="t-bm c-p">“${esc(focus.oneLine)}”</span></div></div>
+          ${reasonText(focus) ? `<p class="t-bm">${esc(reasonText(focus))}</p>` : ""}
+          <a class="btn-t" href="#/card/${focus.id}" style="align-self:flex-start;padding:0">맛 카드 보기 ${icon.chevronRight(16)}</a></div>` : ""}
+        <div class="stack gap8"><h3 class="t-tm">시음 메뉴 ${ms.length}개</h3><p class="t-bm c-v">맛볼 메뉴를 하나 고르세요.</p>
+          <div class="stack gap8" role="radiogroup" aria-label="시음 메뉴">${ms.map(menuCard).join("")}</div></div>
+        <div class="stack gap8" style="background:rgba(245,239,241,.6);border-radius:20px;padding:16px">
+          <h3 class="t-ts" style="font-weight:500">매장 정보</h3>
+          ${infoRow("시간대", `${b.hours} (가상 설정값, 실제 영업 여부 아님)`, true)}${infoRow("주소", UNPROVIDED, true)}${infoRow("소개", UNPROVIDED, true)}
+          ${infoRow("연락처", UNPROVIDED, true)}${infoRow("요약", `취급 주종: ${catsOf(b).join("·")} · 시음 주류 ${drinksOf(b).length}종(메뉴 ${ms.length}개) · 용량 ${volRange(ms)} · ${priceRange(ms)}`, true)}
+        </div>
+      </div></div>
+      <div class="bottom" data-foot>${footer()}</div>
+    </section>`,
+    mount(el) {
+      bindBack(el);
+      const foot = el.querySelector("[data-foot]");
+      const bindFoot = () => {
+        foot.querySelector("[data-try]").onclick = () => { if (barSel[b.id]) go(`#/try/${b.id}?m=${barSel[b.id]}`); };
+        foot.querySelector("[data-reserve]").onclick = () => {
+          if (barSel[b.id] && !reserved()) reserve(el, b, menuById(barSel[b.id]), () => { foot.innerHTML = footer(); bindFoot(); });
+        };
+      };
+      bindFoot();
+      el.querySelectorAll("[data-pick]").forEach((p) => (p.onclick = () => {
+        barSel[b.id] = p.dataset.pick;
+        buzz(5);
+        el.querySelectorAll(".menu").forEach((m) => {
+          const on = m.dataset.menu === barSel[b.id];
+          m.setAttribute("aria-checked", on);
+          m.querySelector(".pick").setAttribute("aria-checked", on);
+          m.querySelector(".ring").classList.toggle("on", on);
+        });
+        foot.innerHTML = footer();
+        bindFoot();
+      }));
+      el.querySelectorAll("[data-exp]").forEach((x) => (x.onclick = () => {
+        const id = x.dataset.exp;
+        if (barExpanded.has(id)) barExpanded.delete(id); else barExpanded.add(id);
+        x.closest(".menu").dataset.expanded = barExpanded.has(id);
+        x.textContent = barExpanded.has(id) ? "간단히 보기" : "원료·만드는 법 자세히";
+      }));
+    },
+  };
+}
+// 예약하기: 실제 예약은 없고 '예약 완료!' 알림만 보여 준다 (사용성 평가 과제 3)
+function reserve(screen, b, m, done) {
+  const pop = document.createElement("div");
+  pop.className = "dialog-wrap";
+  pop.innerHTML = `<div class="dialog" role="alertdialog" aria-modal="true" aria-labelledby="rsv-t">
+    <span class="ok">${icon.check(28)}</span>
+    <h2 id="rsv-t" class="t-tl">예약 완료!</h2>
+    <p class="t-bm c-v" style="margin-top:8px">${esc(b.name)} · ${esc(m.drink?.name)} ${m.ml}mL · 예시 ${won(m.price)}<br>오늘 ${esc(b.hours.split("~")[0])} 이후 방문하면 바로 준비해 드려요.</p>
+    <p class="t-bs c-v" style="margin-top:10px">평가용 화면이라 실제 예약은 되지 않아요</p>
+    <button class="btn btn-p" data-ok style="margin-top:16px">확인</button>
+  </div>`;
+  screen.append(pop);
+  buzz(12);
+  state.reservations = [...(state.reservations || []), { barId: b.id, drinkId: m.drinkId, ml: m.ml, menuId: m.id, at: Date.now() }];
+  save();
+  done();
+  const ok = pop.querySelector("[data-ok]");
+  ok.focus();
+  ok.onclick = () => pop.remove();
+  pop.addEventListener("click", (e) => { if (e.target === pop) pop.remove(); });
+}
+
+/* ---------- C. 맛보기 체험 (3단계) ---------- */
+const STEPS = [
+  { title: "시음 용량 및 가상 조건 확인", sub: "선택한 소량 시음 메뉴의 용량·예시 가격·도수 기준을 먼저 확인해요." },
+  { title: "가상 한 모금 시음 체험", sub: "향·첫 모금의 맛·목넘김 순서로 이 술의 특징을 상상하며 살펴봐요." },
+  { title: "가상 시음 완료 및 탐색 정리", sub: "체험한 시음 정보를 정리하고 다른 메뉴나 주변 바 탐색으로 돌아가요." },
+];
+function tasting({ parts, q }) {
+  const b = barById[parts[1]];
+  let m = q.get("m") && menuById(q.get("m"));
+  if (!b || !m) { go("#/nearby", { replace: true }); return null; }
+  let step = 1;
+  let shown = [0, 0, 0]; // 잔에 지금 그려진 양 (다음 단계로 갈 때 여기서부터 차오른다)
+  const ms = menusOf(b);
+  const fills = () => [1, 2, 3].map((s) => (s < step ? 1 : s === step ? 0.55 : 0));
+  const progress = () => `<div class="steps" role="img" aria-label="3단계 중 ${step}단계">${["조건 확인", "맛보기", "정리"].map((l, i) =>
+    `<div class="${i + 1 === step ? "now" : ""}">${stepGlass(1, i + 1 <= step)}<span>${i + 1}. ${l}</span></div>`).join("")}</div>`;
+  const header = () => `<div class="card row gap12" style="padding:12px">${drinkArt(m.drink, 48, 64)}
+    <div class="grow stack" style="gap:2px"><span class="t-bs c-v">${esc(b.name)} · ${esc(b.distance)}</span><span class="t-tm">${esc(m.drink.name)}</span>
+      <span class="t-bm c-p">${m.ml}mL · 예시 ${won(m.price)} · ${esc(m.drink.abvLabel)}</span></div></div>`;
+  const body = () => {
+    const d = m.drink;
+    const why = reasonText(d);
+    const same = ms.filter((x) => x.drinkId === m.drinkId);
+    if (step === 1) {
+      const opts = same.length > 1 ? same : [m];
+      return `<div class="stack" style="gap:24px">
+        <div class="stack gap8"><h3 class="t-ts" style="font-weight:500">용량</h3>
+          <div class="row gap8" role="radiogroup" aria-label="용량" style="align-items:stretch">${opts.map((o) => `<button class="vol" role="radio" aria-checked="${o.id === m.id}" data-m="${o.id}">
+            <span class="row"><span class="t-tm grow">${o.ml}mL</span><span class="ring ${o.id === m.id ? "on" : ""}" style="width:22px;height:22px"><i></i></span></span>
+            <span class="t-bm c-p">${won(o.price)}</span><span class="t-bs c-v">${openedLabel(o)}</span></button>`).join("")}</div>
+          ${opts.length === 1 ? `<p class="t-bs c-v">이 바에서는 한 가지 용량만 있어요.</p>` : ""}</div>
+        <div class="card stack gap12"><h3 class="t-ts" style="font-weight:500">시음 조건</h3>
+          ${infoRow("용량", volNote(m), true)}${infoRow("가격", `예시 ${won(m.price)} (실제 결제 없음)`, true)}${infoRow("도수", d.abvLabel, true)}
+          ${infoRow("개봉", openedLabel(m), true)}${infoRow("비고", statusNote(m), true)}${ABV_NOTE[m.drinkId] ? `<p class="note-box">${ABV_NOTE[m.drinkId]}</p>` : ""}</div>
+        <p class="t-bm c-v">왜 소량일까요? 병으로 사기 전에 ${m.ml}mL로 향과 맛을 먼저 확인해 실패 부담을 줄이는 가상 서비스예요.</p>
+        ${ms.length > same.length ? `<div class="stack gap8"><h3 class="t-ts" style="font-weight:500">이 바의 다른 메뉴로 바꾸기</h3>
+          <div class="fpills-wrap">${ms.map((o) => `<button class="fpill" data-m="${o.id}" aria-pressed="${o.id === m.id}">${o.id === m.id ? icon.check(16) : ""}${esc(o.drink?.name)} ${o.ml}mL</button>`).join("")}</div></div>` : ""}
+      </div>`;
+    }
+    if (step === 2) {
+      const steps = [["향 맡기", d.aroma], [`${m.ml}mL 중 첫 모금`, d.flavor], ["입안 느낌과 목넘김", d.feel], ["평소 마시던 술과 비교", d.vsSoju]];
+      return `<div class="stack" style="gap:24px">
+        <p class="t-tm c-p" style="font-weight:500">“${esc(d.oneLine)}”</p>
+        <div class="timeline">${steps.map(([l, t], i) => `<div><span class="num"><b>${i + 1}</b>${i < 3 ? "<i></i>" : ""}</span>
+          <span class="txt" style="${i === 3 ? "padding-bottom:0" : ""}"><span class="t-ll c-p">${esc(l)}</span><span class="t-bl">${esc(t)}</span></span></div>`).join("")}</div>
+        ${why ? `<div class="card-pc stack gap4"><p class="t-ll c-p">내 취향과 닮은 점</p><p class="t-bl">${esc(why)}</p></div>` : ""}
+        <div class="stack gap8">${infoRow("원료·제조", `${d.ingredients} · ${d.process}`, true)}${infoRow("숙성·용어", `${d.aging} (${d.glossary})`, true)}${infoRow("참고", d.caution, true)}</div>
+      </div>`;
+    }
+    return `<div class="stack" style="gap:24px">
+      <div class="row gap12"><span class="done-check">${icon.check(22)}</span><p class="t-tm grow">${esc(d.name)} ${m.ml}mL, 맛보기 끝!</p></div>
+      <div class="card stack gap12">${infoRow("바", `${b.name} (${b.area} · ${b.distance})`, true)}${infoRow("술", `${d.name} (${d.category} · ${d.abvLabel})`, true)}
+        ${infoRow("용량·가격", `${m.ml}mL · 예시 ${won(m.price)}`, true)}${infoRow("맛 인상", `“${d.oneLine}” 향: ${d.aroma} / 맛: ${d.flavor}`, true)}
+        ${why ? infoRow("취향 이유", why, true) : ""}</div>
+      <a class="btn btn-s" href="#/review/${d.id}?bar=${b.id}&ml=${m.ml}">맛본 후기 남기기</a>
+      <p class="note-box">HCI 사용자 평가를 위한 시뮬레이션이에요. 실제 매장에 예약이나 주문이 들어가지 않았고, 결제도 일어나지 않았어요.</p>
+    </div>`;
+  };
+  const foot = () => step === 1
+    ? `<button class="btn btn-s" data-to-bar style="flex:1">바 정보로</button><button class="btn btn-p" data-next style="flex:2">다음</button>`
+    : step === 2
+      ? `<button class="btn btn-s" data-prev style="flex:1">이전</button><button class="btn btn-p" data-next style="flex:2">다음</button>`
+      : `<button class="btn btn-s" data-prev style="flex:1">이전</button><a class="btn btn-p" href="#/nearby" style="flex:2">다른 바 둘러보기</a>`;
+  return {
+    html: `<section class="screen">
+      ${topbar("맛보기 체험", { trailing: `<a class="btn-t v" href="#/nearby">바 목록</a>` })}
+      <div class="scroll"><div class="pad stack" style="gap:24px;padding-bottom:32px" data-body></div></div>
+      <div class="bottom"><div class="btns" data-foot></div></div>
+    </section>`,
+    mount(el) {
+      const host = el.querySelector("[data-body]");
+      const scroller = el.querySelector(".scroll");
+      const level = (f) => `${13.1 - (13.1 - 3) * f}px`;
+      const draw = (dir = 0) => {
+        host.innerHTML = `${progress()}${header()}<div class="${dir > 0 ? "step-in-f" : dir < 0 ? "step-in-b" : ""} stack gap16">
+          <div class="stack gap4"><h2 class="t-tl">${STEPS[step - 1].title}</h2><p class="t-bm c-v">${STEPS[step - 1].sub}</p></div>${body()}</div>`;
+        el.querySelector("[data-foot]").innerHTML = foot();
+        // 잔이 단계에 맞게 차오른다
+        const target = fills();
+        const liqs = host.querySelectorAll(".steps .sg-liq");
+        liqs.forEach((l, i) => { l.style.transition = "none"; l.style.y = level(shown[i]); });
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+          liqs.forEach((l, i) => { l.style.transition = ""; l.style.y = level(target[i]); });
+          shown = target;
+        }));
+        host.querySelectorAll("[data-m]").forEach((x) => (x.onclick = () => {
+          m = menuById(x.dataset.m);
+          barSel[b.id] = m.id;
+          history.replaceState(history.state, "", `#/try/${b.id}?m=${m.id}`);
+          buzz(5);
+          draw(0);
+        }));
+        el.querySelector("[data-next]")?.addEventListener("click", () => { step += 1; scroller.scrollTo({ top: 0, behavior: "smooth" }); draw(1); });
+        el.querySelector("[data-prev]")?.addEventListener("click", () => { step -= 1; scroller.scrollTo({ top: 0, behavior: "smooth" }); draw(-1); });
+        el.querySelector("[data-to-bar]")?.addEventListener("click", () => back());
+      };
+      el.querySelector("[data-back]").onclick = () => { if (step > 1) { step -= 1; draw(-1); } else back(); };
+      draw(0);
+    },
+  };
+}
+
+/* ---------- C. 후기 ---------- */
 function review({ parts, q }) {
   const d = drinkById[parts[1]];
   if (!d) { go("#/feed", { replace: true }); return null; }
   const b = barById[q.get("bar")];
   const ml = q.get("ml");
   const form = { reaction: null, chips: [], text: "" };
-  const REACT = [
-    { id: "딱 내 취향", sub: "다시 마실래요", c: "var(--c-fruit)" },
-    { id: "괜찮았어요", sub: "한 번쯤 좋아요", c: "var(--c-grain)" },
-    { id: "내 취향 아님", sub: "다른 걸 볼래요", c: "var(--c-flower)" },
-  ];
+  const REACT = [["딱 내 취향", "다시 마실래요"], ["괜찮았어요", "한 번쯤 좋아요"], ["내 취향 아님", "다른 걸 볼래요"]];
   return {
     html: `<section class="screen">
-      <div class="top"><button class="icon-btn" data-back aria-label="뒤로" style="background:var(--mist)">${I.back}</button></div>
-      <div class="scroll pad" style="padding-top:8px">
-        <h1 class="h1">맛보고 오셨나요?</h1>
-        <p class="done-line"><span class="proof" style="margin:0"><span class="dot">${I.check}</span></span>${esc(shortName(d))}${ml ? ` ${esc(ml)}mL` : ""}${b ? ` · ${esc(b.name)}` : ""}</p>
-        <span class="tag" style="background:var(--mist);margin-top:10px">직접 맛본 후기로 등록돼요</span>
-        <p class="section-title">내 입맛에 맞았어요?</p>
-        <div class="reactions">${REACT.map((r) => `<button class="reaction" data-r="${r.id}" style="background:${r.c}" aria-pressed="false"><b>${r.id}</b><small>${r.sub}</small></button>`).join("")}</div>
-        <p class="section-title">어떤 맛이 느껴졌어요?</p>
-        <div class="chips">${CHIPS.map((c) => `<button class="chip" data-c="${esc(c.label)}" aria-pressed="false">${esc(c.label)}</button>`).join("")}</div>
-        <p class="section-title">한 줄 후기 <span style="font-weight:400;color:var(--muted);font-size:12px">(선택)</span></p>
-        <textarea class="field" rows="2" maxlength="80" placeholder="예: 복숭아 아이스티인데 술이라 신기했어요"></textarea>
-      </div>
-      <div class="bottom">
-        <button class="btn btn-primary" data-submit disabled>후기 남기기</button>
-        <p class="note">남긴 후기는 다음 사람의 맛 카드에 반영돼요</p>
-      </div>
+      ${topbar("맛본 후기")}
+      <div class="scroll"><div class="pad stack" style="gap:24px;padding-bottom:32px">
+        <div class="card row gap12" style="padding:12px">${drinkArt(d, 48, 64)}<div class="grow stack" style="gap:2px">
+          <span class="t-bs c-v">${b ? `${esc(b.name)} · ` : ""}${ml ? `${esc(ml)}mL` : "직접 맛본 후기"}</span><span class="t-tm">${esc(d.name)}</span></div></div>
+        <div class="stack gap8"><h2 class="t-tm">내 입맛에 맞았어요?</h2>
+          <div class="reacts" role="radiogroup" aria-label="내 입맛에 맞았는지">${REACT.map(([r, s]) => `<button class="sel react press" role="radio" aria-checked="false" data-r="${r}"><span class="t-ll">${r}</span><span class="t-bs c-v">${s}</span></button>`).join("")}</div></div>
+        <div class="stack gap8"><h2 class="t-tm">어떤 맛이 느껴졌어요?</h2>
+          <div class="chips">${CHIPS.map((c) => `<button class="fpill" data-c="${esc(c.label)}" aria-pressed="false">${esc(c.label)}</button>`).join("")}</div></div>
+        <div class="stack gap8"><h2 class="t-tm">한 줄 후기 <span class="t-bs c-v">(선택)</span></h2>
+          <textarea class="field" rows="2" maxlength="80" placeholder="예: 복숭아 아이스티인데 술이라 신기했어요"></textarea></div>
+      </div></div>
+      <div class="bottom"><button class="btn btn-p" data-submit disabled>후기 남기기</button>
+        <p class="t-bs c-v center" style="margin-top:8px">남긴 후기는 맛 카드와 내 취향에 반영돼요</p></div>
     </section>`,
     mount(el) {
-      el.querySelector("[data-back]").onclick = () => back();
+      bindBack(el);
       const submit = el.querySelector("[data-submit]");
       el.querySelectorAll("[data-r]").forEach((r) => (r.onclick = () => {
         form.reaction = r.dataset.r;
-        el.querySelectorAll("[data-r]").forEach((x) => x.setAttribute("aria-pressed", x === r));
+        el.querySelectorAll("[data-r]").forEach((x) => x.setAttribute("aria-checked", x === r));
         submit.disabled = false;
+        buzz(5);
       }));
       el.querySelectorAll("[data-c]").forEach((c) => (c.onclick = () => {
         const v = c.dataset.c;
         form.chips = form.chips.includes(v) ? form.chips.filter((x) => x !== v) : [...form.chips, v];
         c.setAttribute("aria-pressed", form.chips.includes(v));
+        c.innerHTML = `${form.chips.includes(v) ? icon.check(16) : ""}${esc(v)}`;
       }));
       submit.onclick = () => {
         form.text = el.querySelector("textarea").value.trim();
@@ -994,6 +1122,7 @@ function review({ parts, q }) {
           if (!state.basePrefs) state.basePrefs = state.prefs || prefsFromAnswers(state.answers.q1);
           state.fb.push({ id: d.id, v, src: "review" });
           recompute();
+          feedDirty = true;
         }
         save();
         toast("후기가 맛 카드에 올라갔어요");
@@ -1006,35 +1135,41 @@ function review({ parts, q }) {
 /* ---------- 내 기록 ---------- */
 function log() {
   ensureRecs();
-  const mini = (d, extra) => `<a class="mini" href="#/card/${d.id}" style="color:inherit;text-decoration:none">
-    <span class="sw" style="background:${drinkColor(d)}">${bottle(d, { title: false })}</span>
-    <span><b>${esc(shortName(d))}</b><small>${esc(extra)}</small></span><span style="color:var(--muted)">›</span></a>`;
+  const mini = (d, extra, href) => `<a class="mini press" href="${href || `#/card/${d.id}`}">${drinkArt(d, 44, 58)}
+    <span class="grow stack" style="gap:2px;min-width:0"><span class="t-ts" style="font-weight:500">${esc(d.name)}</span><span class="t-bs c-v">${esc(extra)}</span></span>
+    <span class="c-v" style="display:grid">${icon.chevronRight()}</span></a>`;
   const liked = state.liked.map((id) => drinkById[id]).filter(Boolean);
+  const rsv = (state.reservations || []).filter((r) => drinkById[r.drinkId] && barById[r.barId]);
   return {
     html: `<section class="screen">
-      <div class="scroll pad" style="padding-top:calc(20px + env(safe-area-inset-top))">
-        <h1 class="h1">내 기록</h1>
-        <div class="log-card" style="margin-top:16px">
-          <span class="pill" style="background:var(--c-fruit)">지금 내 취향</span>
-          <p class="h1" style="font-size:26px;margin-top:10px">${esc(typeName())}</p>
-          <p class="sub">끌려요, 패스, 후기를 남길 때마다 조금씩 바뀌어요.</p>
-          <div class="bars">${bars(state.prefs, 5)}</div>
-          <a class="btn btn-secondary" href="#/q/1" style="margin-top:16px;height:44px;font-size:14px">취향 다시 찾기</a>
+      ${topbar("내 기록", { noBack: true })}
+      <div class="scroll"><div class="pad stack" style="gap:24px;padding-bottom:32px">
+        <div class="card stack gap12">
+          <p class="t-ll c-p">지금 내 취향</p>
+          <h2 class="t-hl" style="font-size:26px;line-height:34px">${esc(typeName())}</h2>
+          <p class="t-bm c-v">끌려요, 패스, 후기를 남길 때마다 조금씩 바뀌어요.</p>
+          <div class="taste-bars">${typeBars(state.prefs, 4).map((b, i) => `<div class="tbar" role="img" aria-label="${b.label} ${b.pct}퍼센트">
+            <div class="row"><span class="t-bl" style="font-weight:500">${b.label}</span><span class="t-bm c-v">${b.pct}%</span></div>
+            <div class="track"><div class="fill" style="width:${b.pct}%;background:${BAR_TONES[i % 4]}"></div></div></div>`).join("")}</div>
+          <a class="btn btn-s" href="#/q/1">취향 다시 찾기</a>
         </div>
-        <p class="section-title">끌린 술 ${liked.length}</p>
-        ${liked.length ? liked.map((d) => mini(d, d.oneLine)).join("") : `<p class="empty">피드에서 하트를 누르면 여기 모여요.</p>`}
-        <p class="section-title">직접 맛본 후기 ${state.reviews.length}</p>
-        ${state.reviews.length ? state.reviews.map((r) => mini(drinkById[r.drinkId], `${r.reaction}${r.barId ? ` · ${barById[r.barId].name}` : ""}${r.text ? ` · ${r.text}` : ""}`)).join("") : `<p class="empty">근처 바에서 맛보고 후기를 남기면 여기 쌓여요.</p>`}
-        <p class="sub" style="margin-top:28px;text-align:center">술, 바, 가격, 후기는 모두 샘플 데이터예요.<br><button class="link" data-reset>처음부터 다시 하기</button></p>
-      </div>
+        <div><h2 class="t-tm" style="margin-bottom:8px">끌린 술 ${liked.length}</h2>
+          ${liked.length ? liked.map((d) => mini(d, `“${d.oneLine}”`)).join("") : `<p class="t-bm c-v">피드에서 끌려요를 누르면 여기 모여요.</p>`}</div>
+        <div><h2 class="t-tm" style="margin-bottom:8px">예약한 곳 ${rsv.length}</h2>
+          ${rsv.length ? rsv.map((r) => mini(drinkById[r.drinkId], `${barById[r.barId].name} · ${r.ml}mL`, `#/bar/${r.barId}?drink=${r.drinkId}`)).join("") : `<p class="t-bm c-v">바 정보에서 예약하기를 누르면 여기 모여요.</p>`}</div>
+        <div><h2 class="t-tm" style="margin-bottom:8px">직접 맛본 후기 ${state.reviews.length}</h2>
+          ${state.reviews.length ? state.reviews.map((r) => mini(drinkById[r.drinkId], `${r.reaction}${r.barId ? ` · ${barById[r.barId].name}` : ""}${r.text ? ` · ${r.text}` : ""}`)).join("") : `<p class="t-bm c-v">맛보기 체험을 마치고 후기를 남기면 여기 쌓여요.</p>`}</div>
+        <p class="t-bs c-v center">술, 바, 가격, 후기는 모두 평가용 예시 데이터예요.<br><button class="btn-t" data-reset>처음부터 다시 하기</button></p>
+      </div></div>
       ${tabbar("log")}
     </section>`,
     mount(el) {
       el.querySelector("[data-reset]").onclick = () => {
-        if (confirm("취향, 끌린 술, 후기를 모두 지울까요?")) { reset(); dropFeed(); go("#/", { replace: true, dir: "back" }); }
+        if (confirm("취향, 끌린 술, 예약, 후기를 모두 지울까요?")) { reset(); dropFeed(); go("#/", { replace: true, dir: "back" }); }
       };
     },
   };
 }
 
+const ROUTES = { "": start, q: question, result, feed, card, nearby, bar, try: tasting, review, log };
 nav.start();
