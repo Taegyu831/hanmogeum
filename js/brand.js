@@ -252,6 +252,37 @@ export function drinkPhoto(d, w, h, lazy = false) {
   return `<span class="art photo" style="width:${w}px;height:${h}px" aria-hidden="true"><img src="img/drinks/${d.id}.webp" alt="" decoding="async"${lazy ? ' loading="lazy"' : ""}></span>`;
 }
 
+/* ---------- 맛 아이콘 (단맛 꿀단지, 신맛 레몬, 탄산 기포 잔, 따른 색 잔) ---------- */
+// 데이터의 0~5 점수를 3단계로: 0 없음, 1~2 약함, 3 보통, 4~5 강함
+export const level3 = (v) => (v <= 0 ? 0 : v <= 2 ? 1 : v === 3 ? 2 : 3);
+const OFF = "#D9C9CF";
+export function jarIcon(on, size = 22) {
+  const st = on ? "#B5761C" : OFF, fl = on ? "#F1B843" : "none";
+  return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="${st}" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M6.5 9.5h11V17a3.5 3.5 0 0 1-3.5 3.5h-4A3.5 3.5 0 0 1 6.5 17z" fill="${fl}"/><path d="M8 5h8v4.5H8z" fill="${on ? "#C98A2E" : "none"}"/>${on ? `<path d="M10.5 9.5v3.2a1 1 0 0 0 2 0V11" stroke="#B5761C" fill="#F7D27A"/>` : ""}</svg>`;
+}
+export function lemonIcon(on, size = 22) {
+  const st = on ? "#B39317" : OFF, fl = on ? "#F2D541" : "none";
+  return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="${st}" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M5 15c-1.3-4.3 2.4-9.4 8-9.8 3.3-.3 5.7 1.4 6.6 3.8 1.3 4.3-2.4 9.4-8 9.8-3.3.3-5.7-1.4-6.6-3.8z" fill="${fl}"/><path d="M19.6 9l1.6-1.6M5 15l-1.6 1.6"/>${on ? `<path d="M9 13.5c1.5-2.6 3.6-4 6-4.4" stroke="#FFF3B0" stroke-width="1.4"/>` : ""}</svg>`;
+}
+// 탄산: 잔 안 기포 개수 3단계 (0이면 기포 없음)
+export function bubbleGlass(lv, size = 24) {
+  const B = [[], [[12, 15, 1.3], [10, 11.5, 1]], [[12, 15.5, 1.3], [9.6, 12, 1], [13.8, 10.5, 1.1], [11, 8, .9]],
+    [[12, 16, 1.3], [9.4, 14, 1], [14.4, 13.5, 1.1], [10.6, 10.8, 1.1], [13.6, 9.6, 1], [9.4, 7.6, .9], [12.4, 6.6, .9], [15, 7, .8]]][lv];
+  const on = lv > 0;
+  return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="${on ? C.primary : OFF}" stroke-width="1.7" stroke-linejoin="round">
+    <path d="M6 4h12l-1.4 15.3A2 2 0 0 1 14.6 21H9.4a2 2 0 0 1-2-1.7z" fill="${on ? "#F6E1E9" : "none"}"/>
+    ${B.map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r}" fill="#fff" stroke="${C.primary}" stroke-width="1.1"/>`).join("")}</svg>`;
+}
+// 잔에 따랐을 때의 색
+export function pourGlass(d, size = 24) {
+  const col = (SPEC[d.id] || [])[1] || "#E8D48B";
+  return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="${C.onSurfaceVariant}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M7 4.6h10V6A5 5 0 0 1 7 6z" fill="${col}" stroke="none"/><path d="M7 3h10v3A5 5 0 0 1 7 6z"/><path d="M12 11V19.5M8.8 20.5h6.4"/></svg>`;
+}
+export const LEVEL_WORD = ["없음", "약함", "보통", "강함"];
+
 /* ---------- 작은 아이콘 ---------- */
 const HEART = "M12 20.5C12 20.5 3.5 15.3 3.5 9.2C3.5 6.4 5.6 4.5 8 4.5C9.7 4.5 11.2 5.5 12 6.9C12.8 5.5 14.3 4.5 16 4.5C18.4 4.5 20.5 6.4 20.5 9.2C20.5 15.3 12 20.5 12 20.5Z";
 export const icon = {

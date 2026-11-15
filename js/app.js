@@ -1,8 +1,8 @@
-import { state, save, reset } from "./store.js?v=11151234";
-import { AXES, Q1, Q2, Q3, prefsFromAnswers, rank, nudge, tasteType, typeBlurb, typeBars, explain } from "./reco.js?v=11151234";
-import { createNav, swallowClick } from "./nav.js?v=11151234";
-import { buzz, burst } from "./fx.js?v=11151234";
-import { C, logoSVG, pourLogo, glyph, drinkArt, drinkPhoto, icon, stepGlass, reduceMotion, FOS } from "./brand.js?v=11151234";
+import { state, save, reset } from "./store.js?v=11151928";
+import { AXES, Q1, Q2, Q3, prefsFromAnswers, rank, nudge, tasteType, typeBlurb, typeBars, explain } from "./reco.js?v=11151928";
+import { createNav, swallowClick } from "./nav.js?v=11151928";
+import { buzz, burst } from "./fx.js?v=11151928";
+import { C, logoSVG, pourLogo, glyph, drinkArt, drinkPhoto, icon, stepGlass, reduceMotion, FOS, level3, jarIcon, lemonIcon, bubbleGlass, pourGlass, LEVEL_WORD } from "./brand.js?v=11151928";
 
 // 화면 모습과 흐름은 안드로이드 앱(design/ui-refresh)과 같게 맞췄다.
 // 웹에서만 정한 것: 예약하기(평가용 완료 알림), 후기, 내 기록, 아래 탭 막대.
@@ -13,7 +13,7 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "
 const won = (n) => n.toLocaleString("ko-KR") + "원";
 
 /* ---------- 데이터 ---------- */
-const load = (f) => fetch(`data/${f}?v=11151234`).then((r) => r.json());
+const load = (f) => fetch(`data/${f}?v=11151928`).then((r) => r.json());
 const [DRINKS, BARS, CHIPS, SAMPLE_REVIEWS] = await Promise.all(
   ["drinks.json", "bars.json", "chips.json", "reviews.json"].map(load));
 const drinkById = Object.fromEntries(DRINKS.map((d) => [d.id, d]));
@@ -67,6 +67,24 @@ const ABV_NOTE = {
   H5: "도수 구분 안내: '진토닉용'으로 표기된 런던 드라이 진이며, 표기된 도수(약 40~47%)와 맛 점수는 토닉워터를 섞기 전 진 원액 기준이에요.",
 };
 const barsFor = (id) => BARS.filter((b) => b.pours.some((p) => p.drinkId === id));
+// 이 술을 가장 싸게 맛볼 수 있는 메뉴 (가격 태그용)
+function cheapest(id) {
+  let best = null;
+  for (const b of BARS) for (const p of b.pours) if (p.drinkId === id && (!best || p.price < best.price || (p.price === best.price && p.ml < best.ml))) best = p;
+  return best;
+}
+const priceTag = (id) => { const c = cheapest(id); return c ? `${c.ml}mL ${won(c.price)}부터` : ""; };
+// 줄글 대신 한눈에: 단맛(꿀단지), 신맛(레몬), 탄산(잔 속 기포), 따른 색
+function tasteIcons(d) {
+  const sw = level3(d.taste.sweet), so = level3(d.taste.sour), fz = level3(d.taste.fizz);
+  const three = (n, f) => [0, 1, 2].map((k) => f(k < n)).join("");
+  return `<div class="tastes" role="img" aria-label="단맛 ${LEVEL_WORD[sw]}, 신맛 ${LEVEL_WORD[so]}, 탄산 ${LEVEL_WORD[fz]}">
+    <div class="tc"><span class="ics">${three(sw, (on) => jarIcon(on, 24))}</span><span class="lb">단맛</span></div>
+    <div class="tc"><span class="ics">${three(so, (on) => lemonIcon(on, 24))}</span><span class="lb">신맛</span></div>
+    <div class="tc"><span class="ics">${bubbleGlass(fz, 28)}</span><span class="lb">탄산 ${LEVEL_WORD[fz]}</span></div>
+    <div class="tc"><span class="ics">${pourGlass(d, 28)}</span><span class="lb">따른 색</span></div>
+  </div>`;
+}
 const CATEGORIES = [...new Set(BARS.flatMap((b) => catsOf(b)))];
 
 /* ---------- 취향 유형 둘러보기 ---------- */
@@ -474,6 +492,7 @@ function result() {
           <span class="t-tm">${esc(d.name)}</span>
           <span class="t-bm c-v">${esc(d.category)} · ${esc(d.abvLabel)}</span>
           <span class="t-bm c-p" style="font-weight:500;margin-top:2px">“${esc(d.oneLine)}”</span>
+          ${priceTag(id) ? `<span class="price-tag">${icon.pin(14)}${priceTag(id)} 맛보기</span>` : ""}
         </span>
         <span class="pop-heart" aria-hidden="true">${icon.heart(true, 28)}</span>
       </span>
@@ -558,7 +577,6 @@ function result() {
 function reelHTML(d, i, total) {
   const fbState = state.liked.includes(d.id) ? "like" : state.passed.includes(d.id) ? "pass" : null;
   const n = barsFor(d.id).length;
-  const why = reasonText(d);
   return `<div class="page" data-id="${d.id}" data-i="${i}">
     <div class="page-behind" aria-hidden="true">${icon.chevronLeft(22)}맛 카드</div>
     <article class="reel" style="--tint:${TINT[d.category] || C.surfaceVariant}" aria-label="${esc(d.name)}">
@@ -571,8 +589,8 @@ function reelHTML(d, i, total) {
         <h2 class="name">${esc(d.name)}</h2>
         <p class="meta">${esc(d.category)} · ${esc(d.abvLabel)}</p>
         <p class="one">“${esc(d.oneLine)}”</p>
-        ${why ? `<p class="why">${esc(why)}</p>` : ""}
-        ${n ? `<a class="near-link" href="#/nearby/${d.id}" aria-label="${esc(d.name)}, 근처 ${n}곳에서 맛볼 수 있어요. 바 보기">${icon.pin()}근처 ${n}곳에서 10~30mL로 맛보기${icon.chevronRight(16, 16)}</a>` : ""}
+        ${tasteIcons(d)}
+        ${n ? `<a class="try-pill" href="#/nearby/${d.id}" aria-label="${esc(d.name)}, ${priceTag(d.id)}, 근처 ${n}곳에서 맛보기. 바 보기">${icon.pin(16)}<b>${priceTag(d.id)}</b><span>· 근처 ${n}곳</span>${icon.chevronRight(14, 14)}</a>` : ""}
         ${i === 0 ? `<p class="first-hint">위로 넘기면 다음 잔 · 왼쪽으로 밀면 맛 카드</p>` : ""}
       </div>
       <div class="rail">
@@ -665,6 +683,7 @@ function feed() {
           const like = p.querySelector("[data-like]"), pass = p.querySelector("[data-pass]");
           const open = () => { state.feedIndex = i; state.hintSeen = true; save(); go(`#/card/${id}`); };
           p.querySelector("[data-open]").onclick = open;
+          p.querySelector(".visual").onclick = open; // 술병을 눌러도 맛 카드가 열린다
           dragReel(reel, open);
 
           like.onclick = () => {
@@ -816,6 +835,7 @@ function card({ parts }) {
             <h2 class="t-hl" style="font-size:24px;line-height:32px">${esc(d.name)}</h2>
             <p class="t-bm c-v">${esc(d.category)} · ${esc(d.abvLabel)}</p></div></div>
         <p class="t-tm c-p" style="font-weight:500">“${esc(d.oneLine)}”</p>
+        ${tasteIcons(d)}
         <div class="card stack gap12"><h3 class="t-tm">한눈에 보는 맛</h3>
           ${infoRow("향", d.aroma)}${infoRow("맛", d.flavor)}${infoRow("느낌", d.feel)}${infoRow("비교", d.vsSoju)}</div>
         <div class="card-pc stack gap4"><p class="t-ll c-p">왜 나에게 맞을까요?</p>
@@ -842,7 +862,7 @@ function card({ parts }) {
       </div></div>
       <div class="bottom" style="padding-top:8px;padding-bottom:calc(8px + env(safe-area-inset-bottom))">
         <div class="fb-text-row" data-fb>${fbRow()}</div>
-        ${n ? `<a class="btn btn-p" href="#/nearby/${d.id}">이 술을 맛볼 수 있는 곳</a>` : `<button class="btn btn-s" data-back2>다른 맛 찾아보기</button>`}
+        ${n ? `<a class="btn btn-p" href="#/nearby/${d.id}">${priceTag(d.id)} · 맛볼 수 있는 곳 ${n}곳</a>` : `<button class="btn btn-s" data-back2>다른 맛 찾아보기</button>`}
       </div>
     </section>`,
     mount(el) {
