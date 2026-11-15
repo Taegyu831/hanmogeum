@@ -1,8 +1,8 @@
-import { state, save, reset } from "./store.js?v=11151148";
-import { AXES, Q1, Q2, Q3, prefsFromAnswers, rank, nudge, tasteType, typeBlurb, typeBars, explain } from "./reco.js?v=11151148";
-import { createNav, swallowClick } from "./nav.js?v=11151148";
-import { buzz, burst } from "./fx.js?v=11151148";
-import { C, logoSVG, pourLogo, glyph, drinkArt, icon, stepGlass, reduceMotion, FOS } from "./brand.js?v=11151148";
+import { state, save, reset } from "./store.js?v=11151155";
+import { AXES, Q1, Q2, Q3, prefsFromAnswers, rank, nudge, tasteType, typeBlurb, typeBars, explain } from "./reco.js?v=11151155";
+import { createNav, swallowClick } from "./nav.js?v=11151155";
+import { buzz, burst } from "./fx.js?v=11151155";
+import { C, logoSVG, pourLogo, glyph, drinkArt, icon, stepGlass, reduceMotion, FOS } from "./brand.js?v=11151155";
 
 // 화면 모습과 흐름은 안드로이드 앱(design/ui-refresh)과 같게 맞췄다.
 // 웹에서만 정한 것: 예약하기(평가용 완료 알림), 후기, 내 기록, 아래 탭 막대.
@@ -12,7 +12,7 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "
 const won = (n) => n.toLocaleString("ko-KR") + "원";
 
 /* ---------- 데이터 ---------- */
-const load = (f) => fetch(`data/${f}?v=11151148`).then((r) => r.json());
+const load = (f) => fetch(`data/${f}?v=11151155`).then((r) => r.json());
 const [DRINKS, BARS, CHIPS, SAMPLE_REVIEWS] = await Promise.all(
   ["drinks.json", "bars.json", "chips.json", "reviews.json"].map(load));
 const drinkById = Object.fromEntries(DRINKS.map((d) => [d.id, d]));
@@ -238,6 +238,7 @@ function start() {
 
 /* ---------- A. 질문 3개 ---------- */
 let justAnswered = false;
+let introPending = false; // 결과 화면 등장 연출은 질문이나 유형 고르기에서 막 왔을 때만
 function question({ parts }) {
   const n = Math.min(3, Math.max(1, Number(parts[1]) || 1));
   const a = state.answers;
@@ -307,13 +308,13 @@ function question({ parts }) {
       }));
       nb.onclick = () => {
         if (n < 3) go(`#/q/${n + 1}`);
-        else { justAnswered = true; go("#/result"); }
+        else { justAnswered = introPending = true; go("#/result"); }
       };
       el.querySelector("[data-skip]").onclick = () => {
         if (n === 1) a.q1 = [];
         if (n === 2) a.q2 = [];
         save();
-        if (n === 3) { justAnswered = true; go("#/result"); } else go(`#/q/${n + 1}`);
+        if (n === 3) { justAnswered = introPending = true; go("#/result"); } else go(`#/q/${n + 1}`);
       };
     },
   };
@@ -349,6 +350,7 @@ function types() {
         state.skipped = false;
         state.basePrefs = null;
         save();
+        introPending = true;
         go("#/result");
       }));
       el.querySelector("[data-startq]").addEventListener("click", () => {
@@ -361,6 +363,84 @@ function types() {
 }
 
 /* ---------- A. 결과 ---------- */
+// 맛 원반: 상위 맛 4개의 비율을 100%로 맞추고, 비율이 클수록 조각 반지름도 조금 커진다.
+function tasteSlices(prefs) {
+  let top = typeBars(prefs, 4).filter((b) => prefs[b.axis] > 0);
+  if (!top.length) top = typeBars(prefs, 4);
+  const vals = top.map((b) => Math.max(prefs[b.axis], 0.0001));
+  const sum = vals.reduce((x, y) => x + y, 0);
+  const pcts = vals.map((v) => Math.round((v / sum) * 100));
+  pcts[0] += 100 - pcts.reduce((x, y) => x + y, 0); // 반올림 오차는 가장 큰 조각에
+  const maxV = Math.max(...vals);
+  return top.map((b, i) => ({ label: b.label, pct: pcts[i], share: vals[i] / sum, r: 64 + 30 * (vals[i] / maxV), color: BAR_TONES[i % 4] }));
+}
+function drawPie(svg, slices, sweep) {
+  const cx = 100, cy = 100;
+  let a0 = 0, out = "";
+  for (const x of slices) {
+    const a1 = a0 + x.share * 360;
+    const end = Math.min(a1, sweep);
+    if (end > a0) {
+      const pt = (deg, r) => { const t = ((deg - 90) * Math.PI) / 180; return `${(cx + r * Math.cos(t)).toFixed(2)} ${(cy + r * Math.sin(t)).toFixed(2)}`; };
+      const span = end - a0;
+      out += span >= 359.99
+        ? `<circle cx="${cx}" cy="${cy}" r="${x.r}" fill="${x.color}"/>`
+        : `<path d="M${cx} ${cy}L${pt(a0, x.r)}A${x.r} ${x.r} 0 ${span > 180 ? 1 : 0} 1 ${pt(end, x.r)}Z" fill="${x.color}" stroke="var(--bg)" stroke-width="2" stroke-linejoin="round"/>`;
+    }
+    a0 = a1;
+  }
+  svg.innerHTML = out;
+}
+// 결과 등장 순서: 유형 이름이 가운데서 떠오름 → 제자리로 올라감 → 설명 → 맛 원반이 아래서 올라오며 시계 방향으로 채워짐.
+// 아래로 한 번 넘기면 추천 술이 하나씩 내려앉는다.
+function playResult(el, slices, intro) {
+  const svg = el.querySelector(".pie");
+  const scroll = el.querySelector(".res-scroll");
+  const recs = [...el.querySelectorAll("[data-recs] .rec, [data-recs] h2, [data-recs] > p")];
+  const showRecs = () => recs.forEach((r, i) => setTimeout(() => r.classList.add("in"), 90 * i));
+  if (!intro) {
+    drawPie(svg, slices, 360);
+    el.querySelectorAll("[data-leg]").forEach((l) => l.classList.add("in"));
+    recs.forEach((r) => r.classList.add("in"));
+    return;
+  }
+  el.classList.add("res-intro");
+  el.querySelectorAll("[data-leg] [data-pct]").forEach((b) => (b.textContent = "0%"));
+  drawPie(svg, slices, 0);
+  const title = el.querySelector("[data-title]"), hero = el.querySelector("[data-hero]");
+  requestAnimationFrame(() => {
+    const hr = hero.getBoundingClientRect(), tr = title.getBoundingClientRect();
+    const dy = hr.top + hr.height * 0.42 - (tr.top + tr.height / 2);
+    const dx = hr.left + hr.width / 2 - (tr.left + tr.width / 2);
+    const at = (k) => `translate(${dx}px, ${dy + k}px) scale(1.12)`;
+    const ease = "cubic-bezier(.4,0,.2,1)";
+    title.animate([{ transform: at(18), opacity: 0 }, { transform: at(0), opacity: 1 }], { duration: 560, easing: "cubic-bezier(.2,.7,.3,1)", fill: "both" });
+    setTimeout(() => {
+      title.animate([{ transform: at(0) }, { transform: "none" }], { duration: 640, easing: ease, fill: "both" });
+    }, 1050);
+    setTimeout(() => el.querySelector("[data-blurb]").classList.add("in"), 1450);
+    setTimeout(() => {
+      el.querySelector("[data-chart]").classList.add("in");
+      el.querySelectorAll("[data-leg]").forEach((l) => l.classList.add("in"));
+      const t0 = performance.now() + 200;
+      const tick = (now) => {
+        const p = Math.min(1, Math.max(0, (now - t0) / 1100));
+        const e = FOS(p);
+        drawPie(svg, slices, e * 360);
+        el.querySelectorAll("[data-leg] [data-pct]").forEach((b) => (b.textContent = `${Math.round(e * Number(b.dataset.pct))}%`));
+        if (p < 1) requestAnimationFrame(tick);
+        else el.querySelector("[data-next]").classList.add("in");
+      };
+      requestAnimationFrame(tick);
+    }, 1700);
+  });
+  // 추천 칸이 화면에 들어오면 하나씩 내려앉는다
+  const io = new IntersectionObserver((ents) => {
+    if (ents.some((e) => e.isIntersecting)) { showRecs(); io.disconnect(); }
+  }, { root: scroll, threshold: 0.15 });
+  io.observe(el.querySelector("[data-recs]"));
+}
+
 function result() {
   const a = state.answers;
   state.basePrefs = basePrefsNow();
@@ -376,13 +456,10 @@ function result() {
   dropFeed();
   const analyzing = justAnswered && !reduceMotion();
   justAnswered = false;
+  const intro = introPending && !reduceMotion();
+  introPending = false;
   const base = state.basePrefs;
-  const barsData = typeBars(base, 4);
-  const picks = [
-    ...Q1.filter((o) => a.q1.includes(o.id)).map((o) => o.label),
-    ...Q2.filter((o) => a.q2.includes(o.id)).map((o) => o.label),
-    ...Q3.filter((o) => o.id === a.q3).map((o) => o.label),
-  ];
+  const slices = tasteSlices(base);
   const recCard = (id, i) => {
     const d = drinkById[id];
     const liked = state.liked.includes(id);
@@ -404,21 +481,28 @@ function result() {
   };
   const content = `<div class="stack" style="flex:1;min-height:0" data-content>
     <div class="topbar"><button class="icon-btn" data-back aria-label="이전 질문으로">${icon.back()}</button><span class="grow"></span></div>
-    <div class="scroll"><div class="pad" style="padding-top:8px;padding-bottom:32px">
-      <p class="t-ll c-p">${presetType() ? "둘러보기로 고른 유형" : "나의 취향 유형"}</p>
-      <h1 class="t-hl" style="font-size:34px;line-height:42px;margin-top:4px">${esc(typeName())}</h1>
-      <p class="t-bl c-v" style="margin-top:8px">${esc(typeBlurb(base))}</p>
-      <div class="card taste-bars" style="margin-top:24px">
-        <p class="t-tm">내가 끌리는 맛</p>
-        ${barsData.map((b, i) => `<div class="tbar" role="img" aria-label="${b.label} ${b.pct}퍼센트">
-          <div class="row"><span class="t-bl" style="font-weight:500">${b.label}</span><span class="t-bm c-v" data-pct="${b.pct}">0%</span></div>
-          <div class="track"><div class="fill" style="background:${BAR_TONES[i % 4]};transition-delay:${120 * i + 150}ms" data-w="${b.pct}"></div></div></div>`).join("")}
-      </div>
-      ${picks.length ? `<p class="t-ll c-v" style="margin-top:24px">내가 고른 답</p><p class="t-bl" style="margin-top:4px">${picks.map(esc).join(" · ")}</p>` : ""}
-      <h2 class="t-tl" style="margin-top:32px">나에게 맞는 첫 한 모금</h2>
-      <p class="t-bm c-v" style="margin-top:4px">끌리는 술을 눌러 하트를 남겨 두세요.</p>
-      <div class="stack gap12" style="margin-top:12px">${top5.map(recCard).join("")}</div>
-    </div></div>
+    <div class="scroll res-scroll">
+      <section class="res-hero pad" data-hero>
+        <div class="res-title" data-title>
+          <p class="t-ll c-p">${presetType() ? "둘러보기로 고른 유형" : "나의 취향 유형"}</p>
+          <h1 class="t-hl" style="font-size:34px;line-height:42px;margin-top:4px">${esc(typeName())}</h1>
+        </div>
+        <p class="t-bl c-v res-blurb" data-blurb>${esc(typeBlurb(base))}</p>
+        <div class="res-chart" data-chart>
+          <h2 class="t-tm">내가 끌리는 맛</h2>
+          <div class="row gap16" style="margin-top:12px">
+            <svg class="pie" viewBox="0 0 200 200" role="img" aria-label="${slices.map((x) => `${x.label} ${x.pct}퍼센트`).join(", ")}"></svg>
+            <ul class="legend">${slices.map((x, i) => `<li data-leg style="--d:${i}"><i style="background:${x.color}"></i><span class="grow">${x.label}</span><b data-pct="${x.pct}">${x.pct}%</b></li>`).join("")}</ul>
+          </div>
+        </div>
+        <p class="res-next" data-next aria-hidden="true">아래로 넘기면 추천 술${icon.chevronDown ? icon.chevronDown(16) : ""}</p>
+      </section>
+      <section class="res-recs pad" data-recs>
+        <h2 class="t-tl">나에게 맞는 첫 한 모금</h2>
+        <p class="t-bm c-v" style="margin-top:4px">끌리는 술을 눌러 하트를 남겨 두세요.</p>
+        <div class="stack" style="margin-top:4px">${top5.map(recCard).join("")}</div>
+      </section>
+    </div>
     <div class="bottom" style="padding-bottom:calc(4px + env(safe-area-inset-bottom))">
       <a class="btn btn-p" href="#/feed" data-go-feed>이 취향으로 추천 보기</a>
       <div class="row" style="justify-content:space-evenly">
@@ -433,21 +517,7 @@ function result() {
 
   const mountContent = (el) => {
     bindBack(el);
-    requestAnimationFrame(() => requestAnimationFrame(() => {
-      el.querySelectorAll(".fill").forEach((f) => (f.style.width = `${f.dataset.w}%`));
-      // 퍼센트 숫자도 막대와 함께 올라간다
-      el.querySelectorAll("[data-pct]").forEach((s, i) => {
-        const target = Number(s.dataset.pct);
-        if (reduceMotion()) { s.textContent = `${target}%`; return; }
-        const t0 = performance.now() + 120 * i + 150;
-        const tick = (now) => {
-          const p = Math.min(1, Math.max(0, (now - t0) / 700));
-          s.textContent = `${Math.floor(FOS(p) * target)}%`;
-          if (p < 1) requestAnimationFrame(tick);
-        };
-        requestAnimationFrame(tick);
-      });
-    }));
+    playResult(el, slices, intro);
     el.querySelectorAll("[data-rec]").forEach((b) => (b.onclick = () => {
       const id = b.dataset.rec;
       const on = !state.liked.includes(id);
