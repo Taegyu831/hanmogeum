@@ -1,8 +1,8 @@
-import { state, save, reset } from "./store.js?v=11161445";
-import { AXES, Q1, Q2, Q3, prefsFromAnswers, rank, nudge, tasteType, typeBlurb, typeBars, explain } from "./reco.js?v=11161445";
-import { createNav, swallowClick } from "./nav.js?v=11161445";
-import { buzz, burst } from "./fx.js?v=11161445";
-import { C, logoSVG, pourLogo, glyph, drinkArt, drinkPhoto, icon, stepGlass, reduceMotion, FOS, level3, jarIcon, lemonIcon, bubbleGlass, pourGlass, LEVEL_WORD, emptyGlass } from "./brand.js?v=11161445";
+import { state, save, reset } from "./store.js?v=11161447";
+import { AXES, Q1, Q2, Q3, prefsFromAnswers, rank, nudge, tasteType, typeBlurb, typeBars, explain } from "./reco.js?v=11161447";
+import { createNav, swallowClick } from "./nav.js?v=11161447";
+import { buzz, burst } from "./fx.js?v=11161447";
+import { C, logoSVG, pourLogo, glyph, drinkArt, drinkPhoto, icon, stepGlass, reduceMotion, FOS, level3, jarIcon, lemonIcon, bubbleGlass, pourGlass, LEVEL_WORD, emptyGlass } from "./brand.js?v=11161447";
 
 // 화면 모습과 흐름은 안드로이드 앱(design/ui-refresh)과 같게 맞췄다.
 // 웹에서만 정한 것: 예약하기(평가용 완료 알림), 후기, 내 기록, 아래 탭 막대.
@@ -13,7 +13,7 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "
 const won = (n) => n.toLocaleString("ko-KR") + "원";
 
 /* ---------- 데이터 ---------- */
-const load = (f) => fetch(`data/${f}?v=11161445`).then((r) => r.json());
+const load = (f) => fetch(`data/${f}?v=11161447`).then((r) => r.json());
 const [DRINKS, BARS, CHIPS, SAMPLE_REVIEWS] = await Promise.all(
   ["drinks.json", "bars.json", "chips.json", "reviews.json"].map(load));
 const drinkById = Object.fromEntries(DRINKS.map((d) => [d.id, d]));
@@ -1590,4 +1590,7 @@ function log() {
 }
 
 const ROUTES = { "": start, level: levelPick, q: question, types, result, feed, card, nearby, bar, try: tasting, review, log };
+// 시연용: 페이지를 열거나 새로고침할 때마다 모든 기록을 지우고 로그인 화면부터 새로 시작한다.
+reset();
+history.replaceState(null, "", location.pathname + location.search);
 nav.start();
