@@ -118,6 +118,10 @@ textarea, input { -webkit-user-select: text; user-select: text; }
 .info-row { display: flex; gap: 12px; }
 .info-row > b { flex: none; width: 64px; color: var(--on-surface-v); font-size: 14px; line-height: 20px; font-weight: 400; padding-top: 2px; }
 .info-row.w72 > b { width: 72px; }
+.kw-row > b { color: var(--primary); font-weight: 700; font-size: 13px; }
+.kw-row > span { color: var(--on-surface-v); }
+strong.kw { font-weight: 700; color: var(--on-surface); }
+.c-pc strong.kw { color: inherit; }
 .info-row > span { flex: 1; font-size: 16px; line-height: 24px; }
 .tag { font-size: 14px; line-height: 20px; color: var(--on-surface-v); }
 .virtual-note { display: flex; align-items: flex-start; gap: 4px; font-size: 12px; line-height: 18px; color: var(--on-surface-v); }

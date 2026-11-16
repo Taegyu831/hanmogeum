@@ -1,8 +1,8 @@
-import { state, save, reset } from "./store.js?v=11161222";
-import { AXES, Q1, Q2, Q3, prefsFromAnswers, rank, nudge, tasteType, typeBlurb, typeBars, explain } from "./reco.js?v=11161222";
-import { createNav, swallowClick } from "./nav.js?v=11161222";
-import { buzz, burst } from "./fx.js?v=11161222";
-import { C, logoSVG, pourLogo, glyph, drinkArt, drinkPhoto, icon, stepGlass, reduceMotion, FOS, level3, jarIcon, lemonIcon, bubbleGlass, pourGlass, LEVEL_WORD, emptyGlass } from "./brand.js?v=11161222";
+import { state, save, reset } from "./store.js?v=11161234";
+import { AXES, Q1, Q2, Q3, prefsFromAnswers, rank, nudge, tasteType, typeBlurb, typeBars, explain } from "./reco.js?v=11161234";
+import { createNav, swallowClick } from "./nav.js?v=11161234";
+import { buzz, burst } from "./fx.js?v=11161234";
+import { C, logoSVG, pourLogo, glyph, drinkArt, drinkPhoto, icon, stepGlass, reduceMotion, FOS, level3, jarIcon, lemonIcon, bubbleGlass, pourGlass, LEVEL_WORD, emptyGlass } from "./brand.js?v=11161234";
 
 // 화면 모습과 흐름은 안드로이드 앱(design/ui-refresh)과 같게 맞췄다.
 // 웹에서만 정한 것: 예약하기(평가용 완료 알림), 후기, 내 기록, 아래 탭 막대.
@@ -13,7 +13,7 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "
 const won = (n) => n.toLocaleString("ko-KR") + "원";
 
 /* ---------- 데이터 ---------- */
-const load = (f) => fetch(`data/${f}?v=11161222`).then((r) => r.json());
+const load = (f) => fetch(`data/${f}?v=11161234`).then((r) => r.json());
 const [DRINKS, BARS, CHIPS, SAMPLE_REVIEWS] = await Promise.all(
   ["drinks.json", "bars.json", "chips.json", "reviews.json"].map(load));
 const drinkById = Object.fromEntries(DRINKS.map((d) => [d.id, d]));
@@ -223,6 +223,13 @@ function tabbar(active) {
 const topbar = (title, { backLabel = "뒤로", trailing = "", noBack = false } = {}) => `<header class="topbar">
   ${noBack ? "" : `<button class="icon-btn" data-back aria-label="${backLabel}">${icon.back()}</button>`}
   <h1 class="title ${noBack ? "pad-l" : ""}">${title}</h1>${trailing}</header>`;
+// 맛 카드 가독성: 향은 재료 이름, 나머지는 맛을 말하는 낱말을 굵게 짚어 준다.
+const AROMA_KW = ["말린 과일", "레몬 껍질", "오렌지 껍질", "흑설탕", "블랙베리", "산딸기", "청사과", "풋사과", "복숭아", "누룽지", "들국화", "초콜릿", "캐러멜", "소독약", "소나무", "아가베", "바닐라", "자몽", "라임", "딸기", "체리", "자두", "누룩", "매실", "곡물", "열매", "생강", "계피", "오크", "연기", "바다", "나무", "레몬", "허브", "멜론", "후추", "고수", "꽃", "풀", "흙", "쌀", "배", "밀"];
+const TASTE_KW = ["달콤새콤", "새콤달콤", "달콤", "새콤", "상큼", "깔끔", "시원", "묵직", "부드러", "부드럽", "쌉쌀", "고소", "구수", "알싸", "청량", "가볍", "가벼", "순하", "순해", "순한", "걸쭉", "탄산", "기포", "따뜻", "여운", "개운", "풍부", "진하", "진해", "진한", "달고", "달아", "맑게", "맑고", "과일", "호불호", "은은하게 달"];
+const kwRe = (list, tail) => new RegExp(`(${list.join("|")})${tail ? "[가-힣]*" : ""}`, "g"); // 낱말은 모두 한글이라 따로 이스케이프하지 않는다
+const AROMA_RE = kwRe(AROMA_KW, false), TASTE_RE = kwRe(TASTE_KW, true);
+const kwHL = (text, aroma = false) => esc(text).replace(aroma ? AROMA_RE : TASTE_RE, (m) => `<strong class="kw">${m}</strong>`);
+const kwRow = (label, value, aroma = false) => `<div class="info-row kw-row"><b>${esc(label)}</b><span>${kwHL(value, aroma)}</span></div>`;
 const infoRow = (label, value, w72 = false) => `<div class="info-row ${w72 ? "w72" : ""}"><b>${esc(label)}</b><span>${esc(value)}</span></div>`;
 const virtualNote = () => `<p class="virtual-note"><span class="i" aria-hidden="true">i</span>바·가격·개봉일은 평가용 가상 데이터예요. 실제 예약·결제는 없어요.</p>`;
 function bindBack(el) { el.querySelector("[data-back]")?.addEventListener("click", () => back()); }
@@ -924,9 +931,9 @@ function card({ parts }) {
         <p class="t-tm c-p" style="font-weight:500">“${esc(d.oneLine)}”</p>
         ${tasteIcons(d)}
         <div class="card stack gap12"><h3 class="t-tm">한눈에 보는 맛</h3>
-          ${infoRow("향", d.aroma)}${infoRow("맛", d.flavor)}${infoRow("느낌", d.feel)}${infoRow("비교", d.vsSoju)}</div>
-        <div class="card-pc stack gap4"><p class="t-ll c-p">왜 나에게 맞을까요?</p>
-          <p class="t-bl c-pc">${esc(why)}</p>${caution ? `<p class="t-bm c-v">참고: ${esc(caution)}</p>` : ""}</div>
+          ${kwRow("향", d.aroma, true)}${kwRow("맛", d.flavor)}${kwRow("느낌", d.feel)}${kwRow("비교", d.vsSoju)}</div>
+        <div class="card-pc stack gap4"><p class="t-ll c-p" style="font-weight:700">왜 나에게 맞을까요?</p>
+          <p class="t-bl c-pc">${kwHL(why)}</p>${caution ? `<p class="t-bm c-v">참고: ${esc(caution)}</p>` : ""}</div>
         <div class="card expand" style="padding:0" data-open="false">
           <button class="expand-head" data-toggle aria-expanded="false">
             <span class="grow stack"><span class="t-tm">더 자세히 알아보기</span><span class="t-bm c-v">원료 · 만드는 법 · 맛 점수</span></span>
