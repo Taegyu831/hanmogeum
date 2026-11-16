@@ -309,7 +309,7 @@ textarea, input { -webkit-user-select: text; user-select: text; }
 .page:not(.cur) .swipe-cue, .page:not(.cur) .swipe-cue .hand { animation: none; }
 @keyframes cueBounce { 0%, 46%, 100% { transform: translateX(0); } 14% { transform: translateX(-14px); } 26% { transform: translateX(0); } 36% { transform: translateX(-6px); } }
 @keyframes handSwipe { 0%, 46%, 100% { transform: translateX(0) rotate(0); } 14% { transform: translateX(-8px) rotate(-12deg); } 26% { transform: translateX(0); } }
-.end-page { height: 100%; border-radius: 28px; background: var(--primary-c); padding: 24px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; text-align: center; }
+.end-page { height: 100%; padding: 24px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; text-align: center; }
 
 /* 아래에서 올라오는 시트 */
 .scrim { position: absolute; inset: 0; background: rgba(43, 36, 48, .32); z-index: 20; display: flex; align-items: flex-end; animation: fadeIn .2s ease-out; }

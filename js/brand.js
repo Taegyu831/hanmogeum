@@ -96,6 +96,14 @@ export function logoSVG(size = 40, { label = "한모금 로고", fill = 1 } = {}
   </svg>`;
 }
 
+/** 로고 잔만, 배경 타일과 내용물 없이 빈 잔으로 (추천 끝 화면용) */
+export function emptyGlass(size = 72) {
+  return `<svg width="${size}" height="${size}" viewBox="0 0 120 120" aria-hidden="true"><g transform="translate(60 69)">
+    <path d="${BOWL}" fill="none" stroke="${C.primary}" stroke-width="7" stroke-linejoin="round"/>
+    <path d="M0 2V40M-20 44H20" stroke="${C.primary}" stroke-width="7" stroke-linecap="round"/>
+  </g></svg>`;
+}
+
 /**
  * 앱 HanmogeumPourLogo와 같은 순서: 원형(시스템 시작 아이콘)에서 둥근 사각으로 바뀌고,
  * 잔이 기울며 와인이 차오르고, 똑바로 서며 찰랑이다 멈춘다. 1.4초 뒤 onSettled.
