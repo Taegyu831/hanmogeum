@@ -1,8 +1,8 @@
-import { state, save, reset } from "./store.js?v=11161447";
-import { AXES, Q1, Q2, Q3, prefsFromAnswers, rank, nudge, tasteType, typeBlurb, typeBars, explain } from "./reco.js?v=11161447";
-import { createNav, swallowClick } from "./nav.js?v=11161447";
-import { buzz, burst } from "./fx.js?v=11161447";
-import { C, logoSVG, pourLogo, glyph, drinkArt, drinkPhoto, icon, stepGlass, reduceMotion, FOS, level3, jarIcon, lemonIcon, bubbleGlass, pourGlass, LEVEL_WORD, emptyGlass } from "./brand.js?v=11161447";
+import { state, save, reset } from "./store.js?v=11161547";
+import { AXES, Q1, Q2, Q3, prefsFromAnswers, rank, nudge, tasteType, typeBlurb, typeBars, explain } from "./reco.js?v=11161547";
+import { createNav, swallowClick } from "./nav.js?v=11161547";
+import { buzz, burst } from "./fx.js?v=11161547";
+import { C, logoSVG, pourLogo, glyph, drinkArt, drinkPhoto, icon, stepGlass, reduceMotion, FOS, level3, jarIcon, lemonIcon, bubbleGlass, pourGlass, LEVEL_WORD, emptyGlass } from "./brand.js?v=11161547";
 
 // 화면 모습과 흐름은 안드로이드 앱(design/ui-refresh)과 같게 맞췄다.
 // 웹에서만 정한 것: 예약하기(평가용 완료 알림), 후기, 내 기록, 아래 탭 막대.
@@ -13,7 +13,7 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "
 const won = (n) => n.toLocaleString("ko-KR") + "원";
 
 /* ---------- 데이터 ---------- */
-const load = (f) => fetch(`data/${f}?v=11161447`).then((r) => r.json());
+const load = (f) => fetch(`data/${f}?v=11161547`).then((r) => r.json());
 const [DRINKS, BARS, CHIPS, SAMPLE_REVIEWS] = await Promise.all(
   ["drinks.json", "bars.json", "chips.json", "reviews.json"].map(load));
 const drinkById = Object.fromEntries(DRINKS.map((d) => [d.id, d]));
@@ -186,7 +186,6 @@ function parentOf(hash) {
     case "q": return Number(parts[1]) > 1 ? `#/q/${Number(parts[1]) - 1}` : "#/";
     case "result": return state.preset ? "#/types" : "#/q/3";
     case "types": return "#/";
-    case "level": return "#/";
     default: return null;
   }
 }
@@ -274,7 +273,7 @@ function start() {
           <button class="btn sns kakao" data-sns aria-describedby="demo-hint"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4C7 4 3 7.2 3 11.1c0 2.5 1.7 4.7 4.2 6l-.9 3.4c-.1.3.3.6.6.4l4-2.7c.4 0 .7.1 1.1.1 5 0 9-3.2 9-7.2S17 4 12 4z" fill="#191919"/></svg>카카오로 시작하기</button>
           <button class="btn sns naver" data-sns aria-describedby="demo-hint"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M10.8 8.6 5 0H0v16h5.2V7.4L11 16h5V0h-5.2z" fill="#fff"/></svg>네이버로 시작하기</button>
           <p class="demo-hint" id="demo-hint" role="status"></p>
-          <a class="btn btn-p demo" href="#/level" data-demo>시연이니까 그냥 넘어갈게요</a>
+          <a class="btn btn-p demo" href="#/q/1" data-demo>시연이니까 그냥 넘어갈게요</a>
         </div>`}
       </div></div>
     </section>`,
@@ -289,8 +288,13 @@ function start() {
         demo.classList.add("nudge");
         buzz(10);
       }));
+      // 넘어가면 임의 닉네임을 받고 바로 취향 질문으로 간다. 등급은 고르지 않고 이용 횟수로 정해진다.
       el.querySelector("[data-demo]")?.addEventListener("click", () => {
-        if (!state.nick) state.nick = NICKS[Math.floor(Math.random() * NICKS.length)];
+        state.nick = state.nick || NICKS[Math.floor(Math.random() * NICKS.length)];
+        state.me = { nick: state.nick };
+        state.answers = { q1: [], q2: [], q3: null };
+        state.skipped = false;
+        state.preset = null;
         save();
       });
       el.querySelector("[data-startq]")?.addEventListener("click", () => {
@@ -299,58 +303,6 @@ function start() {
         state.preset = null;
         save();
       });
-    },
-  };
-}
-
-// 받침이 있으면 '으로', 없거나 ㄹ 받침이면 '로'
-const withRo = (w) => { const b = (w.charCodeAt(w.length - 1) - 0xac00) % 28; return `${w}${b && b !== 8 ? "으로" : "로"}`; };
-/* ---------- A0. 음주 경험 등급 고르기 (시연용 로그인 다음) ---------- */
-function levelPick() {
-  if (!state.nick) { state.nick = NICKS[Math.floor(Math.random() * NICKS.length)]; save(); }
-  let pick = state.me?.level || null;
-  return {
-    html: `<section class="screen">
-      ${topbar("", { backLabel: "처음 화면으로" })}
-      <div class="scroll"><div class="pad stack" style="gap:20px;padding-bottom:24px">
-        <div class="stack gap8">
-          <p class="t-ll c-p rise" style="--d:0">반가워요!</p>
-          <h2 class="t-hl rise" style="--d:1;font-size:26px;line-height:34px"><span class="c-p">${esc(state.nick)}</span>님은<br>어디에 해당하시나요?</h2>
-          <p class="t-bm c-v rise" style="--d:2">후기를 남길 때 이 단계가 함께 보여요.</p>
-        </div>
-        <div class="lv-list" role="radiogroup" aria-label="음주 경험 단계">
-          ${LEVELS.map((l, i) => `<button class="lv-row press rise" style="--d:${i + 3}" role="radio" aria-checked="${pick === l.name}" data-lv="${l.name}">
-            <span class="rv-av" style="background:${l.bg};color:${l.color};border-color:${l.color}">${i + 1}</span>
-            <span class="grow stack" style="gap:2px"><b style="color:${l.color}">${l.name}</b><span class="t-bm c-v">${LEVEL_DESC[l.name]}</span></span>
-            <span class="ring ${pick === l.name ? "on" : ""}" aria-hidden="true" style="width:22px;height:22px"><i></i></span>
-          </button>`).join("")}
-        </div>
-      </div></div>
-      <div class="bottom rise" style="--d:9"><button class="btn btn-p" data-go ${pick ? "" : 'aria-disabled="true"'}>${pick ? `${withRo(pick)} 시작하기` : "단계를 골라 주세요"}</button></div>
-    </section>`,
-    mount(el) {
-      bindBack(el);
-      const go2 = el.querySelector("[data-go]");
-      el.querySelectorAll("[data-lv]").forEach((b) => (b.onclick = () => {
-        pick = b.dataset.lv;
-        el.querySelectorAll("[data-lv]").forEach((x) => {
-          const on = x.dataset.lv === pick;
-          x.setAttribute("aria-checked", on);
-          x.querySelector(".ring").classList.toggle("on", on);
-        });
-        go2.removeAttribute("aria-disabled");
-        go2.textContent = `${withRo(pick)} 시작하기`;
-        buzz(6);
-      }));
-      go2.onclick = () => {
-        if (!pick) return;
-        state.me = { nick: state.nick, level: pick };
-        state.answers = { q1: [], q2: [], q3: null };
-        state.skipped = false;
-        state.preset = null;
-        save();
-        go("#/q/1");
-      };
     },
   };
 }
@@ -1007,16 +959,12 @@ const LEVELS = [
   { name: "박사", color: "#B8860B", bg: "#FBF1D3" },
 ];
 const levelOf = (name) => LEVELS.find((l) => l.name === name) || LEVELS[0];
-// 첫 화면에서 고른 등급. 고르기 전이라면 처음 쓰는 사용자라는 설정대로 술알못.
-const myLevel = () => state.me?.level || "술알못";
-const LEVEL_DESC = {
-  술알못: "술 이름도 잘 모르고, 한두 잔이면 충분한 정도예요.",
-  초심자: "소주·맥주 말고 다른 술이 궁금해지기 시작한 정도예요.",
-  중급자: "좋아하는 술 종류가 생겨서 가끔 골라 마시는 정도예요.",
-  애주가: "새로운 술을 맛보러 일부러 바를 찾아가는 정도예요.",
-  고인물: "원산지나 만드는 법까지 따져 보고 마시는 정도예요.",
-  박사: "향만 맡아도 품종이나 숙성을 짐작하는 정도예요.",
-};
+// 등급은 고르는 게 아니라 한모금을 쓴 만큼 오른다. 이용 횟수 = 바 예약 + 맛본 후기.
+// 처음 쓰는 사용자는 0번이라 술알못에서 시작한다.
+const LEVEL_AT = [0, 1, 3, 6, 10, 20]; // LEVELS 순서대로, 그 단계가 되는 이용 횟수
+const useCount = () => (state.reservations || []).length + state.reviews.length;
+const levelIndexFor = (n) => LEVEL_AT.reduce((k, at, i) => (n >= at ? i : k), 0);
+const myLevel = () => LEVELS[levelIndexFor(useCount())].name;
 const NICKS = ["말랑한 복숭아", "느긋한 하이볼", "수줍은 막걸리", "반짝이는 스파클링", "포근한 매실주", "산뜻한 레몬"];
 const reviewKey = (r) => (r.sample ? `s${SAMPLE_REVIEWS.indexOf(r)}` : `m${r.date || ""}`);
 function reviewHTML(r) {
@@ -1556,7 +1504,9 @@ function log() {
         ${(() => { const lv = levelOf(myLevel()); return `<div class="me-lv">
           <span class="rv-av lg" style="background:${lv.bg};color:${lv.color};border-color:${lv.color}">나</span>
           <div><p class="t-hl" style="font-size:22px;line-height:30px">나는 <span style="color:${lv.color}">${lv.name}</span>${(lv.name.charCodeAt(lv.name.length - 1) - 0xac00) % 28 ? "이에요" : "예요"}!</p>
-          <p class="t-bs c-v">${LEVELS.map((l) => `<span style="color:${l.color};font-weight:${l.name === lv.name ? 700 : 500}">${l.name}</span>`).join(" › ")}</p></div></div>`; })()}
+          <p class="t-bs c-v">${(() => { const n = useCount(), k = levelIndexFor(n); return k < LEVELS.length - 1 ? `한모금 이용 ${n}번 · ${LEVELS[k + 1].name}까지 ${LEVEL_AT[k + 1] - n}번 남았어요` : `한모금 이용 ${n}번 · 가장 높은 단계예요`; })()}</p></div></div>
+        <div class="lv-ladder">${LEVELS.map((l, i) => `<span class="${l.name === lv.name ? "on" : ""}" style="--c:${l.color};--b:${l.bg}"><b>${l.name}</b><i>${LEVEL_AT[i]}번~</i></span>`).join("")}</div>
+        <p class="t-bs c-v" style="margin-top:-12px">예약하거나 맛본 후기를 남길 때마다 이용 횟수가 올라가요.</p>`; })()}
         <div class="card stack gap12">
           <p class="t-ll c-p">지금 내 취향</p>
           <h2 class="t-hl" style="font-size:26px;line-height:34px">${esc(typeName())}</h2>
@@ -1589,7 +1539,7 @@ function log() {
   };
 }
 
-const ROUTES = { "": start, level: levelPick, q: question, types, result, feed, card, nearby, bar, try: tasting, review, log };
+const ROUTES = { "": start, q: question, types, result, feed, card, nearby, bar, try: tasting, review, log };
 // 시연용: 페이지를 열거나 새로고침할 때마다 모든 기록을 지우고 로그인 화면부터 새로 시작한다.
 reset();
 history.replaceState(null, "", location.pathname + location.search);

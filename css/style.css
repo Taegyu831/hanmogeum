@@ -187,10 +187,6 @@ strong.kw { font-weight: 700; color: var(--on-surface); }
 /* 글자가 아래에서 스르륵 떠오르며 나타난다 (차례대로) */
 .rise { animation: riseIn .55s cubic-bezier(.2, .7, .3, 1) both; animation-delay: calc(var(--d, 0) * 70ms + 80ms); }
 @keyframes riseIn { from { opacity: 0; transform: translateY(16px); } }
-.lv-list { display: flex; flex-direction: column; }
-.lv-row { display: flex; align-items: center; gap: 14px; padding: 14px 20px; margin: 0 -20px; border-bottom: 1px solid var(--divider); text-align: left; }
-.lv-row b { font-size: 17px; line-height: 24px; font-weight: 700; }
-.lv-row[aria-checked="true"] { background: #FBEFF3; }
 
 /* ---------- 질문 ---------- */
 .q-head { padding: env(safe-area-inset-top) 8px 0; flex: none; }
@@ -424,6 +420,11 @@ strong.kw { font-weight: 700; color: var(--on-surface); }
 .rv-like { display: inline-flex; align-items: center; gap: 4px; margin-top: 8px; min-height: 32px; padding: 0 10px 0 8px; margin-left: -8px; border-radius: 999px; color: var(--on-surface-v); font-size: 13px; font-weight: 500; }
 .rv-like[aria-pressed="true"] { color: var(--primary); }
 .me-lv { display: flex; align-items: center; gap: 14px; }
+.lv-ladder { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; }
+.lv-ladder span { display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 6px 0; border-radius: 10px; color: var(--c); }
+.lv-ladder b { font-size: 12px; line-height: 16px; font-weight: 700; }
+.lv-ladder i { font-style: normal; font-size: 10px; line-height: 14px; color: var(--on-surface-v); }
+.lv-ladder span.on { background: var(--b); box-shadow: inset 0 0 0 1.5px var(--c); }
 
 /* ---------- 근처 ---------- */
 .map { position: relative; height: 220px; background: #F3EBE4; overflow: hidden; margin: 0 -20px; }
