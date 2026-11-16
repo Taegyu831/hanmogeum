@@ -290,6 +290,22 @@ textarea, input { -webkit-user-select: text; user-select: text; }
   background: #F6E1E9; color: var(--primary); font-size: 12px; line-height: 18px; font-weight: 700; }
 .price-tag svg circle { fill: #F6E1E9; }
 .reel .visual { cursor: pointer; }
+/* 글씨는 제자리, 사진만 넘어간다: 글씨 층은 피드 화면 기준으로 고정되고 스크롤에 따라 흐려졌다 나타난다.
+   카드를 옆으로 밀 때(.moving)는 카드 안으로 돌아와 같이 움직인다. */
+.feed-screen { transform: translateZ(0); }
+.reel .fx { position: fixed; z-index: 3; opacity: var(--o, 0); }
+.page.fx-off .fx { pointer-events: none; }
+.page.fx-gone .fx { visibility: hidden; }
+.reel .top.fx { top: calc(var(--ft) + 12px); left: 20px; right: 20px; }
+.reel .info.fx { bottom: calc(var(--fb) + 16px); left: 20px; right: 20px; }
+.reel .rail.fx { bottom: calc(var(--fb) + 20px); right: 12px; }
+.reel .swipe-cue.fx { top: calc(var(--ft) + var(--ph) * .42); right: 0; }
+.reel.moving .fx { position: absolute; }
+.reel.moving .top.fx { top: 12px; }
+.reel.moving .info.fx { bottom: 16px; }
+.reel.moving .rail.fx { bottom: 20px; }
+.reel.moving .swipe-cue.fx { top: 42%; }
+.reel .visual { margin-top: 40px; margin-bottom: var(--ih, 220px); }
 .rail { position: absolute; right: 12px; bottom: 20px; z-index: 3; display: flex; flex-direction: column; gap: 14px; }
 .rail-btn { width: 56px; display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--on-surface); font-size: 12px; line-height: 16px; font-weight: 500; }
 .rail-btn .ic { width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center; background: rgba(255, 255, 255, .78); box-shadow: 0 2px 8px rgba(43, 36, 48, .1);

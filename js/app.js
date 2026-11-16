@@ -1,8 +1,8 @@
-import { state, save, reset } from "./store.js?v=11160913";
-import { AXES, Q1, Q2, Q3, prefsFromAnswers, rank, nudge, tasteType, typeBlurb, typeBars, explain } from "./reco.js?v=11160913";
-import { createNav, swallowClick } from "./nav.js?v=11160913";
-import { buzz, burst } from "./fx.js?v=11160913";
-import { C, logoSVG, pourLogo, glyph, drinkArt, drinkPhoto, icon, stepGlass, reduceMotion, FOS, level3, jarIcon, lemonIcon, bubbleGlass, pourGlass, LEVEL_WORD, emptyGlass } from "./brand.js?v=11160913";
+import { state, save, reset } from "./store.js?v=11160918";
+import { AXES, Q1, Q2, Q3, prefsFromAnswers, rank, nudge, tasteType, typeBlurb, typeBars, explain } from "./reco.js?v=11160918";
+import { createNav, swallowClick } from "./nav.js?v=11160918";
+import { buzz, burst } from "./fx.js?v=11160918";
+import { C, logoSVG, pourLogo, glyph, drinkArt, drinkPhoto, icon, stepGlass, reduceMotion, FOS, level3, jarIcon, lemonIcon, bubbleGlass, pourGlass, LEVEL_WORD, emptyGlass } from "./brand.js?v=11160918";
 
 // 화면 모습과 흐름은 안드로이드 앱(design/ui-refresh)과 같게 맞췄다.
 // 웹에서만 정한 것: 예약하기(평가용 완료 알림), 후기, 내 기록, 아래 탭 막대.
@@ -13,7 +13,7 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "
 const won = (n) => n.toLocaleString("ko-KR") + "원";
 
 /* ---------- 데이터 ---------- */
-const load = (f) => fetch(`data/${f}?v=11160913`).then((r) => r.json());
+const load = (f) => fetch(`data/${f}?v=11160918`).then((r) => r.json());
 const [DRINKS, BARS, CHIPS, SAMPLE_REVIEWS] = await Promise.all(
   ["drinks.json", "bars.json", "chips.json", "reviews.json"].map(load));
 const drinkById = Object.fromEntries(DRINKS.map((d) => [d.id, d]));
@@ -582,12 +582,12 @@ function reelHTML(d, i, total) {
   return `<div class="page" data-id="${d.id}" data-i="${i}">
     <div class="page-behind" aria-hidden="true">${icon.chevronLeft(22)}맛 카드</div>
     <article class="reel" style="--tint:${TINT[d.category] || C.surfaceVariant}" aria-label="${esc(d.name)}">
-      <div class="top"><span class="cat">${esc(d.category)}</span><span class="grow"></span>
+      <div class="top fx"><span class="cat">${esc(d.category)}</span><span class="grow"></span>
         <span class="count" aria-label="${total}잔 중 ${i + 1}번째">${i + 1} / ${total}</span></div>
       <div class="visual"><span class="glow" aria-hidden="true"></span>${drinkPhoto(d, 210, 300, i > 1)}</div>
-      <button class="swipe-cue" data-open aria-label="${esc(d.name)} 맛 카드 열기. 왼쪽으로 밀어도 열려요">
+      <button class="swipe-cue fx" data-open aria-label="${esc(d.name)} 맛 카드 열기. 왼쪽으로 밀어도 열려요">
         <span class="hand">${icon.hand(22)}</span><span class="chev">${icon.chevronLeft(14)}${icon.chevronLeft(14)}</span><span>맛 카드</span></button>
-      <div class="info">
+      <div class="info fx">
         <h2 class="name">${esc(d.name)}</h2>
         <p class="meta">${esc(d.category)} · ${esc(d.abvLabel)}</p>
         <p class="one">“${esc(d.oneLine)}”</p>
@@ -595,7 +595,7 @@ function reelHTML(d, i, total) {
         ${n ? `<a class="try-pill" href="#/nearby/${d.id}" aria-label="${esc(d.name)}, ${priceTag(d.id)}, 근처 ${n}곳에서 맛보기. 바 보기">${icon.pin(16)}<b>${priceTag(d.id)}</b><span>· 근처 ${n}곳</span>${icon.chevronRight(14, 14)}</a>` : ""}
         ${i === 0 ? `<p class="first-hint">위로 넘기면 다음 잔 · 왼쪽으로 밀면 맛 카드</p>` : ""}
       </div>
-      <div class="rail">
+      <div class="rail fx">
         <button class="rail-btn like" data-like aria-pressed="${fbState === "like"}" aria-label="${esc(d.name)} 끌려요"><span class="ic">${icon.heart(fbState === "like", 26)}</span><span class="lb">끌려요</span></button>
         <button class="rail-btn pass" data-pass aria-pressed="${fbState === "pass"}" aria-label="${esc(d.name)} 패스"><span class="ic">${icon.cross(20)}</span><span class="lb">패스</span></button>
       </div>
@@ -626,7 +626,7 @@ function feed() {
   ensureRecs();
   const pages = () => state.order.map((id, i) => reelHTML(drinkById[id], i, state.order.length)).join("") + endHTML();
   return {
-    html: `<section class="screen">${feedHead()}<div class="pager" id="pager">${pages()}</div>${tabbar("feed")}</section>`,
+    html: `<section class="screen feed-screen">${feedHead()}<div class="pager" id="pager">${pages()}</div>${tabbar("feed")}</section>`,
     show(el) {
       el.querySelector(".feed-head").outerHTML = feedHead();
       el.querySelector(".feed-head [data-liked]").onclick = () => openLiked(el);
@@ -652,6 +652,35 @@ function feed() {
         }, 120);
       });
 
+      // 글씨(이름, 설명, 버튼)는 제자리에 두고 사진만 위아래로 넘어간다.
+      // 넘기는 동안 지금 잔의 글씨는 흐려지고, 다음 잔의 글씨가 같은 자리에서 나타난다.
+      const measure = () => {
+        const H = pager.clientHeight;
+        el.style.setProperty("--ft", `${pager.offsetTop}px`);
+        el.style.setProperty("--fb", `${el.clientHeight - pager.offsetTop - H}px`);
+        el.style.setProperty("--ph", `${H}px`);
+        pager.querySelectorAll(".page[data-id]").forEach((p) => p.style.setProperty("--ih", `${p.querySelector(".info").offsetHeight}px`));
+      };
+      let fadeQ = 0;
+      const fade = () => {
+        fadeQ = 0;
+        const H = pager.clientHeight || 1, top = pager.scrollTop;
+        pager.querySelectorAll(".page[data-id]").forEach((p) => {
+          const rel = Math.abs(p.offsetTop - top) / H;
+          const o = Math.max(0, 1 - rel * 2.5);
+          const prev = p._o;
+          if (prev === o) return;
+          p._o = o;
+          p.style.setProperty("--o", o.toFixed(3));
+          p.classList.toggle("fx-off", o < 0.5);
+          p.classList.toggle("fx-gone", o === 0);
+        });
+      };
+      el._fxRefresh = () => { measure(); fade(); };
+      pager.addEventListener("scroll", () => { if (!fadeQ) fadeQ = requestAnimationFrame(fade); }, { passive: true });
+      new ResizeObserver(() => el._fxRefresh()).observe(pager);
+      requestAnimationFrame(() => requestAnimationFrame(() => el._fxRefresh()));
+
       // 이미 본 잔은 그대로 두고, 다음 잔들만 지금 취향으로 다시 줄 세운다.
       const rerankAfter = (i) => {
         const headIds = state.order.slice(0, i + 1);
@@ -665,6 +694,7 @@ function feed() {
         tmp.innerHTML = state.order.map((id, k) => (k > i ? reelHTML(drinkById[id], k, state.order.length) : "")).join("") + endHTML();
         pager.append(...tmp.children);
         bind(pager);
+        el._fxRefresh?.();
       };
       el._rerank = rerankAfter;
       const updateCount = () => {
@@ -737,11 +767,13 @@ function feed() {
         const reel = pager.querySelector('.page[data-i="0"] .reel');
         setTimeout(() => {
           if (!reel?.isConnected || state.hintSeen) return;
+          reel.classList.add("moving");
           reel.style.transition = "transform 380ms cubic-bezier(.4,0,.2,1)";
           reel.style.transform = "translateX(-72px)";
           setTimeout(() => {
             reel.style.transition = "transform 700ms cubic-bezier(.3,1.5,.5,1)";
             reel.style.transform = "";
+            setTimeout(() => reel.classList.remove("moving"), 720);
             state.hintSeen = true;
             save();
           }, 640);
@@ -767,6 +799,7 @@ function dragReel(reel, open) {
       s.on = true;
       try { reel.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
       reel.style.transition = "none";
+      reel.classList.add("moving");
     }
     s.dx = dx < 0 ? dx : dx * 0.25;
     reel.style.transform = `translateX(${s.dx}px)`;
@@ -780,10 +813,11 @@ function dragReel(reel, open) {
     if (dx < -96 && e.type !== "pointercancel") {
       buzz(6);
       open();
-      setTimeout(() => { reel.style.transition = "none"; reel.style.transform = ""; }, 420);
+      setTimeout(() => { reel.style.transition = "none"; reel.style.transform = ""; reel.classList.remove("moving"); }, 420);
     } else {
       reel.style.transition = "transform 500ms cubic-bezier(.3,1.4,.5,1)";
       reel.style.transform = "";
+      setTimeout(() => { if (!s) reel.classList.remove("moving"); }, 520);
     }
   };
   reel.addEventListener("pointerup", end);
