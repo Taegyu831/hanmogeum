@@ -10,6 +10,7 @@ const fresh = () => ({
   liked: [],
   passed: [],
   reviews: [],
+  reviewLikes: {},
   feedIndex: 0,
   hintSeen: false,
 });

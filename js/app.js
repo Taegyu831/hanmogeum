@@ -1,8 +1,8 @@
-import { state, save, reset } from "./store.js?v=11161421";
-import { AXES, Q1, Q2, Q3, prefsFromAnswers, rank, nudge, tasteType, typeBlurb, typeBars, explain } from "./reco.js?v=11161421";
-import { createNav, swallowClick } from "./nav.js?v=11161421";
-import { buzz, burst } from "./fx.js?v=11161421";
-import { C, logoSVG, pourLogo, glyph, drinkArt, drinkPhoto, icon, stepGlass, reduceMotion, FOS, level3, jarIcon, lemonIcon, bubbleGlass, pourGlass, LEVEL_WORD, emptyGlass } from "./brand.js?v=11161421";
+import { state, save, reset } from "./store.js?v=11161430";
+import { AXES, Q1, Q2, Q3, prefsFromAnswers, rank, nudge, tasteType, typeBlurb, typeBars, explain } from "./reco.js?v=11161430";
+import { createNav, swallowClick } from "./nav.js?v=11161430";
+import { buzz, burst } from "./fx.js?v=11161430";
+import { C, logoSVG, pourLogo, glyph, drinkArt, drinkPhoto, icon, stepGlass, reduceMotion, FOS, level3, jarIcon, lemonIcon, bubbleGlass, pourGlass, LEVEL_WORD, emptyGlass } from "./brand.js?v=11161430";
 
 // 화면 모습과 흐름은 안드로이드 앱(design/ui-refresh)과 같게 맞췄다.
 // 웹에서만 정한 것: 예약하기(평가용 완료 알림), 후기, 내 기록, 아래 탭 막대.
@@ -13,7 +13,7 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "
 const won = (n) => n.toLocaleString("ko-KR") + "원";
 
 /* ---------- 데이터 ---------- */
-const load = (f) => fetch(`data/${f}?v=11161421`).then((r) => r.json());
+const load = (f) => fetch(`data/${f}?v=11161430`).then((r) => r.json());
 const [DRINKS, BARS, CHIPS, SAMPLE_REVIEWS] = await Promise.all(
   ["drinks.json", "bars.json", "chips.json", "reviews.json"].map(load));
 const drinkById = Object.fromEntries(DRINKS.map((d) => [d.id, d]));
@@ -925,6 +925,51 @@ function openLiked(screen) {
   sh.addEventListener("click", (e) => { if (e.target === sh || e.target.closest("a")) sh.remove(); });
 }
 
+/* ---------- 후기 작성자 등급 ---------- */
+// 음주 경험 단계. 프로필 동그라미와 등급 이름 색이 단계마다 다르다.
+const LEVELS = [
+  { name: "술알못", color: "#6F6A75", bg: "#EEEDEF" },
+  { name: "초심자", color: "#3E9B6A", bg: "#E2F3EA" },
+  { name: "중급자", color: "#3B7BD4", bg: "#E3EDFA" },
+  { name: "애주가", color: "#8A55C9", bg: "#EFE6F8" },
+  { name: "고인물", color: "#D9822B", bg: "#FBEEDF" },
+  { name: "박사", color: "#B8860B", bg: "#FBF1D3" },
+];
+const levelOf = (name) => LEVELS.find((l) => l.name === name) || LEVELS[0];
+const MY_LEVEL = "술알못"; // 이 앱을 처음 쓰는 사용자라는 설정
+const reviewKey = (r) => (r.sample ? `s${SAMPLE_REVIEWS.indexOf(r)}` : `m${r.date || ""}`);
+function reviewHTML(r) {
+  const mine = !r.sample;
+  const lv = levelOf(mine ? MY_LEVEL : r.level);
+  const nick = mine ? "나" : r.nick || "익명";
+  const key = reviewKey(r);
+  const on = !!state.reviewLikes[key];
+  const count = (r.likes || 0) + (on ? 1 : 0);
+  return `<article class="rv">
+    <div class="rv-head">
+      <span class="rv-av" style="background:${lv.bg};color:${lv.color};border-color:${lv.color}">${esc(nick[0])}</span>
+      <span class="rv-who"><b>${esc(nick)}</b><span class="rv-lv" style="color:${lv.color};background:${lv.bg}">${lv.name}</span></span>
+      <span class="rv-react">${esc(r.reaction)}</span>
+    </div>
+    ${r.text ? `<p class="rv-text">${esc(r.text)}</p>` : ""}
+    ${r.chips?.length ? `<p class="rv-chips">${r.chips.map((c) => `<span>#${esc(c)}</span>`).join("")}</p>` : ""}
+    <button class="rv-like" data-rv-like="${key}" aria-pressed="${on}" aria-label="이 후기 좋아요, ${count}개">${icon.heart(on, 16)}<span>${count}</span></button>
+  </article>`;
+}
+function bindReviewLikes(root) {
+  root.querySelectorAll("[data-rv-like]").forEach((b) => (b.onclick = () => {
+    const k = b.dataset.rvLike;
+    const on = !state.reviewLikes[k];
+    if (on) state.reviewLikes[k] = 1; else delete state.reviewLikes[k];
+    save();
+    const n = Number(b.querySelector("span").textContent) + (on ? 1 : -1);
+    b.setAttribute("aria-pressed", on);
+    b.setAttribute("aria-label", `이 후기 좋아요, ${n}개`);
+    b.innerHTML = `${icon.heart(on, 16)}<span>${n}</span>`;
+    if (on) buzz(8);
+  }));
+}
+
 /* ---------- B. 맛 카드 ---------- */
 function card({ parts }) {
   ensureRecs();
@@ -974,8 +1019,7 @@ function card({ parts }) {
         </div>
         <div class="stack gap8">
           <h3 class="t-tm">맛본 사람들의 후기 ${reviews.length}</h3>
-          ${reviews.length ? reviews.slice(0, 4).map((r) => `<div class="review"><p class="t-ll c-p">${esc(r.reaction)}${r.chips?.length ? ` · ${esc(r.chips.join(", "))}` : ""}</p>
-            ${r.text ? `<p class="t-bm" style="margin-top:2px">${esc(r.text)}</p>` : ""}${r.sample ? "" : `<p class="t-bs c-v" style="margin-top:2px">내가 남긴 후기</p>`}</div>`).join("")
+          ${reviews.length ? `<div class="rv-list">${reviews.slice(0, 4).map(reviewHTML).join("")}</div>`
           : `<p class="t-bm c-v">아직 후기가 없어요. 맛보고 첫 후기를 남겨 주세요.</p>`}
         </div>
       </div></div>
@@ -986,6 +1030,7 @@ function card({ parts }) {
     </section>`,
     mount(el) {
       bindBack(el);
+      bindReviewLikes(el);
       el.querySelector("[data-back2]")?.addEventListener("click", () => back());
       const ex = el.querySelector(".expand");
       el.querySelector("[data-toggle]").onclick = (e) => {
@@ -1427,6 +1472,10 @@ function log() {
     html: `<section class="screen">
       ${topbar("내 기록", { noBack: true })}
       <div class="scroll"><div class="pad stack" style="gap:24px;padding-bottom:32px">
+        ${(() => { const lv = levelOf(MY_LEVEL); return `<div class="me-lv">
+          <span class="rv-av lg" style="background:${lv.bg};color:${lv.color};border-color:${lv.color}">나</span>
+          <div><p class="t-hl" style="font-size:22px;line-height:30px">나는 <span style="color:${lv.color}">${lv.name}</span>${(lv.name.charCodeAt(lv.name.length - 1) - 0xac00) % 28 ? "이에요" : "예요"}!</p>
+          <p class="t-bs c-v">${LEVELS.map((l) => `<span style="color:${l.name === lv.name ? l.color : "inherit"};font-weight:${l.name === lv.name ? 700 : 400}">${l.name}</span>`).join(" › ")}</p></div></div>`; })()}
         <div class="card stack gap12">
           <p class="t-ll c-p">지금 내 취향</p>
           <h2 class="t-hl" style="font-size:26px;line-height:34px">${esc(typeName())}</h2>

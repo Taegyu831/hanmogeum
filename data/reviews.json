@@ -7,7 +7,10 @@
   ],
   "text": "복숭아 아이스티인데 술이라 신기했어요",
   "reaction": "딱 내 취향",
-  "sample": true
+  "sample": true,
+  "nick": "복숭아러버",
+  "level": "초심자",
+  "likes": 12
  },
  {
   "drinkId": "W1",
@@ -17,7 +20,10 @@
   ],
   "text": "디저트 와인 느낌이라 식후에 좋을 듯해요",
   "reaction": "딱 내 취향",
-  "sample": true
+  "sample": true,
+  "nick": "퇴근후한잔",
+  "level": "중급자",
+  "likes": 7
  },
  {
   "drinkId": "W2",
@@ -27,7 +33,10 @@
   ],
   "text": "풀 향이 나는데 개운해서 고기랑 어울릴 것 같아요",
   "reaction": "괜찮았어요",
-  "sample": true
+  "sample": true,
+  "nick": "주말소믈리에",
+  "level": "애주가",
+  "likes": 15
  },
  {
   "drinkId": "W6",
@@ -37,7 +46,10 @@
   ],
   "text": "진해서 한 잔이면 충분했어요",
   "reaction": "내 취향 아님",
-  "sample": true
+  "sample": true,
+  "nick": "홈술러",
+  "level": "초심자",
+  "likes": 4
  },
  {
   "drinkId": "K1",
@@ -47,7 +59,10 @@
   ],
   "text": "누룽지 맛이 나요. 달아서 자꾸 마시게 돼요",
   "reaction": "딱 내 취향",
-  "sample": true
+  "sample": true,
+  "nick": "연남동주민",
+  "level": "중급자",
+  "likes": 9
  },
  {
   "drinkId": "K2",
@@ -57,7 +72,10 @@
   ],
   "text": "요거트 같은 상큼함이 의외였어요",
   "reaction": "괜찮았어요",
-  "sample": true
+  "sample": true,
+  "nick": "막걸리요정",
+  "level": "고인물",
+  "likes": 21
  },
  {
   "drinkId": "K3",
@@ -67,7 +85,10 @@
   ],
   "text": "매실청 같아서 부담이 없었어요",
   "reaction": "딱 내 취향",
-  "sample": true
+  "sample": true,
+  "nick": "술알못탈출",
+  "level": "술알못",
+  "likes": 6
  },
  {
   "drinkId": "K4",
@@ -77,7 +98,10 @@
   ],
   "text": "향은 좋은데 도수가 세서 조금씩만 마셨어요",
   "reaction": "괜찮았어요",
-  "sample": true
+  "sample": true,
+  "nick": "증류식사랑",
+  "level": "박사",
+  "likes": 18
  },
  {
   "drinkId": "H1",
@@ -87,7 +111,10 @@
   ],
   "text": "생각보다 부드럽고 달콤한 향이 났어요",
   "reaction": "딱 내 취향",
-  "sample": true
+  "sample": true,
+  "nick": "하이볼장인",
+  "level": "애주가",
+  "likes": 11
  },
  {
   "drinkId": "H2",
@@ -97,7 +124,10 @@
   ],
   "text": "병원 냄새 같다는 말이 무슨 뜻인지 알겠어요",
   "reaction": "내 취향 아님",
-  "sample": true
+  "sample": true,
+  "nick": "위스키곰",
+  "level": "고인물",
+  "likes": 24
  },
  {
   "drinkId": "H4",
@@ -107,7 +137,10 @@
   ],
   "text": "맥주처럼 편하게 마시기 좋아요",
   "reaction": "딱 내 취향",
-  "sample": true
+  "sample": true,
+  "nick": "퇴근길하이볼",
+  "level": "초심자",
+  "likes": 8
  },
  {
   "drinkId": "H7",
@@ -117,6 +150,9 @@
   ],
   "text": "배 같은 단맛이 은은해서 깔끔했어요",
   "reaction": "딱 내 취향",
-  "sample": true
+  "sample": true,
+  "nick": "사케한잔",
+  "level": "중급자",
+  "likes": 5
  }
 ]
