@@ -1,8 +1,8 @@
-import { state, save, reset } from "./store.js?v=11160933";
-import { AXES, Q1, Q2, Q3, prefsFromAnswers, rank, nudge, tasteType, typeBlurb, typeBars, explain } from "./reco.js?v=11160933";
-import { createNav, swallowClick } from "./nav.js?v=11160933";
-import { buzz, burst } from "./fx.js?v=11160933";
-import { C, logoSVG, pourLogo, glyph, drinkArt, drinkPhoto, icon, stepGlass, reduceMotion, FOS, level3, jarIcon, lemonIcon, bubbleGlass, pourGlass, LEVEL_WORD, emptyGlass } from "./brand.js?v=11160933";
+import { state, save, reset } from "./store.js?v=11161220";
+import { AXES, Q1, Q2, Q3, prefsFromAnswers, rank, nudge, tasteType, typeBlurb, typeBars, explain } from "./reco.js?v=11161220";
+import { createNav, swallowClick } from "./nav.js?v=11161220";
+import { buzz, burst } from "./fx.js?v=11161220";
+import { C, logoSVG, pourLogo, glyph, drinkArt, drinkPhoto, icon, stepGlass, reduceMotion, FOS, level3, jarIcon, lemonIcon, bubbleGlass, pourGlass, LEVEL_WORD, emptyGlass } from "./brand.js?v=11161220";
 
 // 화면 모습과 흐름은 안드로이드 앱(design/ui-refresh)과 같게 맞췄다.
 // 웹에서만 정한 것: 예약하기(평가용 완료 알림), 후기, 내 기록, 아래 탭 막대.
@@ -13,7 +13,7 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "
 const won = (n) => n.toLocaleString("ko-KR") + "원";
 
 /* ---------- 데이터 ---------- */
-const load = (f) => fetch(`data/${f}?v=11160933`).then((r) => r.json());
+const load = (f) => fetch(`data/${f}?v=11161220`).then((r) => r.json());
 const [DRINKS, BARS, CHIPS, SAMPLE_REVIEWS] = await Promise.all(
   ["drinks.json", "bars.json", "chips.json", "reviews.json"].map(load));
 const drinkById = Object.fromEntries(DRINKS.map((d) => [d.id, d]));
@@ -906,12 +906,16 @@ function card({ parts }) {
     ["fruit", "과일"], ["flower", "꽃"], ["grain", "곡물"], ["wood", "나무"], ["smoke", "연기"], ["herb", "허브"]];
   const fbRow = () => {
     const like = state.liked.includes(d.id), pass = state.passed.includes(d.id);
-    return `<button class="fb-text" data-like aria-pressed="${like}" aria-label="${esc(d.name)} 끌려요"><span class="ic">${icon.heart(like, 20)}</span>끌려요</button><span class="sep"></span>
-      <button class="fb-text" data-pass aria-pressed="${pass}" aria-label="${esc(d.name)} 패스"><span class="ic">${icon.cross(20, 22)}</span>패스</button>`;
+    return `<button class="fb-text" data-pass aria-pressed="${pass}" aria-label="${esc(d.name)} 패스"><span class="ic">${icon.cross(20, 22)}</span>패스</button><span class="sep"></span>
+      <button class="fb-text" data-like aria-pressed="${like}" aria-label="${esc(d.name)} 끌려요"><span class="ic">${icon.heart(like, 20)}</span>끌려요</button>`;
+  };
+  const topLike = () => {
+    const like = state.liked.includes(d.id);
+    return `<button class="icon-btn top-like" data-top-like aria-pressed="${like}" aria-label="${esc(d.name)} 끌려요">${icon.heart(like, 26)}</button>`;
   };
   return {
     html: `<section class="screen card-screen">
-      ${topbar("맛 카드", { backLabel: "추천 피드로 돌아가기" })}
+      ${topbar("맛 카드", { backLabel: "추천 피드로 돌아가기", trailing: `<span data-top-wrap>${topLike()}</span>` })}
       <div class="scroll"><div class="pad stack" style="gap:24px;padding-bottom:32px">
         <div class="row gap16">${drinkPhoto(d, 104, 140)}
           <div class="stack gap4"><p class="t-ll c-p">${pos ? `피드 ${pos}번째 잔` : esc(d.category)}</p>
@@ -958,14 +962,20 @@ function card({ parts }) {
         e.currentTarget.setAttribute("aria-expanded", open);
       };
       const row = el.querySelector("[data-fb]");
+      const topWrap = el.querySelector("[data-top-wrap]");
+      // 아래 '끌려요'와 오른쪽 위 하트는 같은 상태를 함께 바꾼다
+      const toggleLike = () => {
+        const on = !state.liked.includes(d.id);
+        setFeedback(d.id, on ? true : null);
+        feedDirty = true;
+        if (on) { buzz(12); toast("끌린 맛을 다음 추천에 반영할게요"); } else toast("끌려요를 취소했어요");
+        row.innerHTML = fbRow(); bindFb();
+        if (on) burst(topWrap.querySelector("svg"), el, HEART_SPARKS);
+      };
       const bindFb = () => {
-        row.querySelector("[data-like]").onclick = () => {
-          const on = !state.liked.includes(d.id);
-          setFeedback(d.id, on ? true : null);
-          feedDirty = true;
-          if (on) { buzz(12); toast("끌린 맛을 다음 추천에 반영할게요"); } else toast("끌려요를 취소했어요");
-          row.innerHTML = fbRow(); bindFb();
-        };
+        topWrap.innerHTML = topLike();
+        topWrap.querySelector("[data-top-like]").onclick = toggleLike;
+        row.querySelector("[data-like]").onclick = toggleLike;
         row.querySelector("[data-pass]").onclick = () => {
           const on = !state.passed.includes(d.id);
           setFeedback(d.id, on ? false : null);

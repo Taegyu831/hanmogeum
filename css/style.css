@@ -104,6 +104,7 @@ textarea, input { -webkit-user-select: text; user-select: text; }
 .topbar { display: flex; align-items: center; min-height: 56px; padding: env(safe-area-inset-top) 8px 0; flex: none; }
 .topbar .title { flex: 1; font-size: 18px; line-height: 26px; font-weight: 700; padding-left: 4px; }
 .topbar .title.pad-l { padding-left: 12px; }
+.top-like { color: var(--primary); }
 .bottom { flex: none; border-top: 1px solid var(--divider); background: var(--bg); padding: 12px 20px calc(12px + env(safe-area-inset-bottom)); }
 .bottom .btns { display: flex; gap: 12px; }
 
