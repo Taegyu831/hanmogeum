@@ -1,8 +1,8 @@
-import { state, save, reset } from "./store.js?v=11161220";
-import { AXES, Q1, Q2, Q3, prefsFromAnswers, rank, nudge, tasteType, typeBlurb, typeBars, explain } from "./reco.js?v=11161220";
-import { createNav, swallowClick } from "./nav.js?v=11161220";
-import { buzz, burst } from "./fx.js?v=11161220";
-import { C, logoSVG, pourLogo, glyph, drinkArt, drinkPhoto, icon, stepGlass, reduceMotion, FOS, level3, jarIcon, lemonIcon, bubbleGlass, pourGlass, LEVEL_WORD, emptyGlass } from "./brand.js?v=11161220";
+import { state, save, reset } from "./store.js?v=11161222";
+import { AXES, Q1, Q2, Q3, prefsFromAnswers, rank, nudge, tasteType, typeBlurb, typeBars, explain } from "./reco.js?v=11161222";
+import { createNav, swallowClick } from "./nav.js?v=11161222";
+import { buzz, burst } from "./fx.js?v=11161222";
+import { C, logoSVG, pourLogo, glyph, drinkArt, drinkPhoto, icon, stepGlass, reduceMotion, FOS, level3, jarIcon, lemonIcon, bubbleGlass, pourGlass, LEVEL_WORD, emptyGlass } from "./brand.js?v=11161222";
 
 // 화면 모습과 흐름은 안드로이드 앱(design/ui-refresh)과 같게 맞췄다.
 // 웹에서만 정한 것: 예약하기(평가용 완료 알림), 후기, 내 기록, 아래 탭 막대.
@@ -13,7 +13,7 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "
 const won = (n) => n.toLocaleString("ko-KR") + "원";
 
 /* ---------- 데이터 ---------- */
-const load = (f) => fetch(`data/${f}?v=11161220`).then((r) => r.json());
+const load = (f) => fetch(`data/${f}?v=11161222`).then((r) => r.json());
 const [DRINKS, BARS, CHIPS, SAMPLE_REVIEWS] = await Promise.all(
   ["drinks.json", "bars.json", "chips.json", "reviews.json"].map(load));
 const drinkById = Object.fromEntries(DRINKS.map((d) => [d.id, d]));
@@ -1026,7 +1026,7 @@ function barCard(b, drink, cat) {
   const matching = cat ? ms.filter((m) => m.drink?.category === cat) : ms;
   const drinks = drinksOf(b);
   return `<a class="bar-card press ${hl ? "hl" : ""}" href="#/bar/${b.id}${drink ? `?drink=${drink.id}` : ""}">
-    <div class="row"><div class="grow stack" style="gap:2px"><span class="t-tm">${esc(b.name)}</span><span class="t-bm c-v">${esc(b.area)} · ${esc(b.distance)}</span></div>
+    <div class="row"><div class="grow stack" style="gap:2px"><span class="t-tm bar-name"><span class="pin-ic" aria-hidden="true">${icon.pin(18)}</span>${esc(b.name)}</span><span class="t-bm c-v">${esc(b.area)} · ${esc(b.distance)}</span></div>
       <span class="c-v" style="display:grid">${icon.chevronRight()}</span></div>
     ${hl ? `<div class="has-box stack" style="gap:2px"><span class="t-ll c-p">${esc(drink.name)} 있어요</span>
       <span class="t-bl" style="font-weight:500">${dm.map((m) => `${m.ml}mL ${won(m.price)}`).join("  ·  ")}</span></div>` : ""}
@@ -1061,9 +1061,9 @@ function nearby({ parts }) {
           <div class="pad">${mapHTML(hl, drink.id)}</div>`
         : `<p class="pad t-bl c-v">한 병이 부담될 때, 10~30mL로 먼저 맛볼 수 있는 곳이에요.</p>
           <div class="pad">${mapHTML(hl, null)}</div>
-          ${liked.length ? `<div class="stack gap8"><h2 class="pad t-ts">끌린 술로 찾기</h2>
+          ${liked.length ? `<div class="stack gap8"><h2 class="pad t-ts">내가 끌린 술들</h2>
             <div class="hrow">${liked.map((d) => drinkChip(d, "", barsFor(d.id).length, true)).join("")}</div></div>` : ""}
-          <div class="stack gap8"><h2 class="pad t-ts">내 추천 술로 찾기</h2>
+          <div class="stack gap8"><h2 class="pad t-ts">추천받은 술들</h2>
             <div class="hrow">${top.map((d, i) => drinkChip(d, `${i + 1}위`, barsFor(d.id).length)).join("")}</div></div>
           <div class="stack gap8"><h2 class="pad t-ts">주종으로 찾기</h2>
             <div class="hrow" role="tablist" aria-label="주종">

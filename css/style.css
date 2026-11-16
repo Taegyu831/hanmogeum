@@ -105,6 +105,9 @@ textarea, input { -webkit-user-select: text; user-select: text; }
 .topbar .title { flex: 1; font-size: 18px; line-height: 26px; font-weight: 700; padding-left: 4px; }
 .topbar .title.pad-l { padding-left: 12px; }
 .top-like { color: var(--primary); }
+.bar-name { display: flex; align-items: center; gap: 4px; }
+.bar-name .pin-ic { display: grid; color: var(--primary); margin-left: -2px; }
+.bar-name .pin-ic svg circle { fill: var(--bg); }
 .bottom { flex: none; border-top: 1px solid var(--divider); background: var(--bg); padding: 12px 20px calc(12px + env(safe-area-inset-bottom)); }
 .bottom .btns { display: flex; gap: 12px; }
 
