@@ -1,8 +1,8 @@
-import { state, save, reset } from "./store.js?v=11161242";
-import { AXES, Q1, Q2, Q3, prefsFromAnswers, rank, nudge, tasteType, typeBlurb, typeBars, explain } from "./reco.js?v=11161242";
-import { createNav, swallowClick } from "./nav.js?v=11161242";
-import { buzz, burst } from "./fx.js?v=11161242";
-import { C, logoSVG, pourLogo, glyph, drinkArt, drinkPhoto, icon, stepGlass, reduceMotion, FOS, level3, jarIcon, lemonIcon, bubbleGlass, pourGlass, LEVEL_WORD, emptyGlass } from "./brand.js?v=11161242";
+import { state, save, reset } from "./store.js?v=11161301";
+import { AXES, Q1, Q2, Q3, prefsFromAnswers, rank, nudge, tasteType, typeBlurb, typeBars, explain } from "./reco.js?v=11161301";
+import { createNav, swallowClick } from "./nav.js?v=11161301";
+import { buzz, burst } from "./fx.js?v=11161301";
+import { C, logoSVG, pourLogo, glyph, drinkArt, drinkPhoto, icon, stepGlass, reduceMotion, FOS, level3, jarIcon, lemonIcon, bubbleGlass, pourGlass, LEVEL_WORD, emptyGlass } from "./brand.js?v=11161301";
 
 // 화면 모습과 흐름은 안드로이드 앱(design/ui-refresh)과 같게 맞췄다.
 // 웹에서만 정한 것: 예약하기(평가용 완료 알림), 후기, 내 기록, 아래 탭 막대.
@@ -13,7 +13,7 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "
 const won = (n) => n.toLocaleString("ko-KR") + "원";
 
 /* ---------- 데이터 ---------- */
-const load = (f) => fetch(`data/${f}?v=11161242`).then((r) => r.json());
+const load = (f) => fetch(`data/${f}?v=11161301`).then((r) => r.json());
 const [DRINKS, BARS, CHIPS, SAMPLE_REVIEWS] = await Promise.all(
   ["drinks.json", "bars.json", "chips.json", "reviews.json"].map(load));
 const drinkById = Object.fromEntries(DRINKS.map((d) => [d.id, d]));
@@ -235,7 +235,7 @@ const topbar = (title, { backLabel = "뒤로", trailing = "", noBack = false } =
 const AROMA_KW = ["말린 과일", "레몬 껍질", "오렌지 껍질", "흑설탕", "블랙베리", "산딸기", "청사과", "풋사과", "복숭아", "누룽지", "들국화", "초콜릿", "캐러멜", "소독약", "소나무", "아가베", "바닐라", "자몽", "라임", "딸기", "체리", "자두", "누룩", "매실", "곡물", "열매", "생강", "계피", "오크", "연기", "바다", "나무", "레몬", "허브", "멜론", "후추", "고수", "꽃", "풀", "흙", "쌀", "배", "밀"];
 const TASTE_KW = ["달콤새콤", "새콤달콤", "달콤", "새콤", "상큼", "깔끔", "시원", "묵직", "부드러", "부드럽", "쌉쌀", "고소", "구수", "알싸", "청량", "가볍", "가벼", "순하", "순해", "순한", "걸쭉", "탄산", "기포", "따뜻", "여운", "개운", "풍부", "진하", "진해", "진한", "달고", "달아", "맑게", "맑고", "과일", "호불호", "은은하게 달"];
 // 가게 사진 (없는 가게는 사진 없이 보여 준다)
-const BAR_PHOTOS = new Set(["B1", "B3", "B4"]);
+const BAR_PHOTOS = new Set(["B1", "B2", "B3", "B4"]);
 const barPhoto = (b, cls = "") => (BAR_PHOTOS.has(b.id) ? `<span class="bar-photo ${cls}"><img src="img/bars/${b.id}.webp" alt="${esc(b.name)} 가게 안 모습 (가상)" loading="lazy" decoding="async"></span>` : "");
 const kwRe = (list, tail) => new RegExp(`(${list.join("|")})${tail ? "[가-힣]*" : ""}`, "g"); // 낱말은 모두 한글이라 따로 이스케이프하지 않는다
 const AROMA_RE = kwRe(AROMA_KW, false), TASTE_RE = kwRe(TASTE_KW, true);
