@@ -1,8 +1,8 @@
-import { state, save, reset } from "./store.js?v=11161430";
-import { AXES, Q1, Q2, Q3, prefsFromAnswers, rank, nudge, tasteType, typeBlurb, typeBars, explain } from "./reco.js?v=11161430";
-import { createNav, swallowClick } from "./nav.js?v=11161430";
-import { buzz, burst } from "./fx.js?v=11161430";
-import { C, logoSVG, pourLogo, glyph, drinkArt, drinkPhoto, icon, stepGlass, reduceMotion, FOS, level3, jarIcon, lemonIcon, bubbleGlass, pourGlass, LEVEL_WORD, emptyGlass } from "./brand.js?v=11161430";
+import { state, save, reset } from "./store.js?v=11161435";
+import { AXES, Q1, Q2, Q3, prefsFromAnswers, rank, nudge, tasteType, typeBlurb, typeBars, explain } from "./reco.js?v=11161435";
+import { createNav, swallowClick } from "./nav.js?v=11161435";
+import { buzz, burst } from "./fx.js?v=11161435";
+import { C, logoSVG, pourLogo, glyph, drinkArt, drinkPhoto, icon, stepGlass, reduceMotion, FOS, level3, jarIcon, lemonIcon, bubbleGlass, pourGlass, LEVEL_WORD, emptyGlass } from "./brand.js?v=11161435";
 
 // 화면 모습과 흐름은 안드로이드 앱(design/ui-refresh)과 같게 맞췄다.
 // 웹에서만 정한 것: 예약하기(평가용 완료 알림), 후기, 내 기록, 아래 탭 막대.
@@ -13,7 +13,7 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "
 const won = (n) => n.toLocaleString("ko-KR") + "원";
 
 /* ---------- 데이터 ---------- */
-const load = (f) => fetch(`data/${f}?v=11161430`).then((r) => r.json());
+const load = (f) => fetch(`data/${f}?v=11161435`).then((r) => r.json());
 const [DRINKS, BARS, CHIPS, SAMPLE_REVIEWS] = await Promise.all(
   ["drinks.json", "bars.json", "chips.json", "reviews.json"].map(load));
 const drinkById = Object.fromEntries(DRINKS.map((d) => [d.id, d]));
@@ -1475,7 +1475,7 @@ function log() {
         ${(() => { const lv = levelOf(MY_LEVEL); return `<div class="me-lv">
           <span class="rv-av lg" style="background:${lv.bg};color:${lv.color};border-color:${lv.color}">나</span>
           <div><p class="t-hl" style="font-size:22px;line-height:30px">나는 <span style="color:${lv.color}">${lv.name}</span>${(lv.name.charCodeAt(lv.name.length - 1) - 0xac00) % 28 ? "이에요" : "예요"}!</p>
-          <p class="t-bs c-v">${LEVELS.map((l) => `<span style="color:${l.name === lv.name ? l.color : "inherit"};font-weight:${l.name === lv.name ? 700 : 400}">${l.name}</span>`).join(" › ")}</p></div></div>`; })()}
+          <p class="t-bs c-v">${LEVELS.map((l) => `<span style="color:${l.color};font-weight:${l.name === lv.name ? 700 : 500}">${l.name}</span>`).join(" › ")}</p></div></div>`; })()}
         <div class="card stack gap12">
           <p class="t-ll c-p">지금 내 취향</p>
           <h2 class="t-hl" style="font-size:26px;line-height:34px">${esc(typeName())}</h2>
