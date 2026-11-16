@@ -1,8 +1,8 @@
-import { state, save, reset } from "./store.js?v=11160918";
-import { AXES, Q1, Q2, Q3, prefsFromAnswers, rank, nudge, tasteType, typeBlurb, typeBars, explain } from "./reco.js?v=11160918";
-import { createNav, swallowClick } from "./nav.js?v=11160918";
-import { buzz, burst } from "./fx.js?v=11160918";
-import { C, logoSVG, pourLogo, glyph, drinkArt, drinkPhoto, icon, stepGlass, reduceMotion, FOS, level3, jarIcon, lemonIcon, bubbleGlass, pourGlass, LEVEL_WORD, emptyGlass } from "./brand.js?v=11160918";
+import { state, save, reset } from "./store.js?v=11160922";
+import { AXES, Q1, Q2, Q3, prefsFromAnswers, rank, nudge, tasteType, typeBlurb, typeBars, explain } from "./reco.js?v=11160922";
+import { createNav, swallowClick } from "./nav.js?v=11160922";
+import { buzz, burst } from "./fx.js?v=11160922";
+import { C, logoSVG, pourLogo, glyph, drinkArt, drinkPhoto, icon, stepGlass, reduceMotion, FOS, level3, jarIcon, lemonIcon, bubbleGlass, pourGlass, LEVEL_WORD, emptyGlass } from "./brand.js?v=11160922";
 
 // 화면 모습과 흐름은 안드로이드 앱(design/ui-refresh)과 같게 맞췄다.
 // 웹에서만 정한 것: 예약하기(평가용 완료 알림), 후기, 내 기록, 아래 탭 막대.
@@ -13,7 +13,7 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "
 const won = (n) => n.toLocaleString("ko-KR") + "원";
 
 /* ---------- 데이터 ---------- */
-const load = (f) => fetch(`data/${f}?v=11160918`).then((r) => r.json());
+const load = (f) => fetch(`data/${f}?v=11160922`).then((r) => r.json());
 const [DRINKS, BARS, CHIPS, SAMPLE_REVIEWS] = await Promise.all(
   ["drinks.json", "bars.json", "chips.json", "reviews.json"].map(load));
 const drinkById = Object.fromEntries(DRINKS.map((d) => [d.id, d]));
@@ -653,7 +653,7 @@ function feed() {
       });
 
       // 글씨(이름, 설명, 버튼)는 제자리에 두고 사진만 위아래로 넘어간다.
-      // 넘기는 동안 지금 잔의 글씨는 흐려지고, 다음 잔의 글씨가 같은 자리에서 나타난다.
+      // 절반 넘게 넘기면 지금 잔의 글씨가 다음 잔의 글씨로 교차하며 바뀐다.
       const measure = () => {
         const H = pager.clientHeight;
         el.style.setProperty("--ft", `${pager.offsetTop}px`);
@@ -665,15 +665,11 @@ function feed() {
       const fade = () => {
         fadeQ = 0;
         const H = pager.clientHeight || 1, top = pager.scrollTop;
+        // 절반 넘게 넘어가면 그 잔이 '지금 잔': 글씨가 서로 교차하며 부드럽게 바뀐다
+        const k = Math.round(top / H);
         pager.querySelectorAll(".page[data-id]").forEach((p) => {
-          const rel = Math.abs(p.offsetTop - top) / H;
-          const o = Math.max(0, 1 - rel * 2.5);
-          const prev = p._o;
-          if (prev === o) return;
-          p._o = o;
-          p.style.setProperty("--o", o.toFixed(3));
-          p.classList.toggle("fx-off", o < 0.5);
-          p.classList.toggle("fx-gone", o === 0);
+          const on = Math.round(p.offsetTop / H) === k;
+          if (p._on !== on) { p._on = on; p.classList.toggle("fx-on", on); }
         });
       };
       el._fxRefresh = () => { measure(); fade(); };
@@ -862,7 +858,7 @@ function card({ parts }) {
       <button class="fb-text" data-pass aria-pressed="${pass}" aria-label="${esc(d.name)} 패스"><span class="ic">${icon.cross(20, 22)}</span>패스</button>`;
   };
   return {
-    html: `<section class="screen">
+    html: `<section class="screen card-screen">
       ${topbar("맛 카드", { backLabel: "추천 피드로 돌아가기" })}
       <div class="scroll"><div class="pad stack" style="gap:24px;padding-bottom:32px">
         <div class="row gap16">${drinkPhoto(d, 104, 140)}

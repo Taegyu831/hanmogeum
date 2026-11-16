@@ -290,12 +290,15 @@ textarea, input { -webkit-user-select: text; user-select: text; }
   background: #F6E1E9; color: var(--primary); font-size: 12px; line-height: 18px; font-weight: 700; }
 .price-tag svg circle { fill: #F6E1E9; }
 .reel .visual { cursor: pointer; }
+.card-screen, .card-screen .bottom { background: #FCEFF3; }
 /* 글씨는 제자리, 사진만 넘어간다: 글씨 층은 피드 화면 기준으로 고정되고 스크롤에 따라 흐려졌다 나타난다.
    카드를 옆으로 밀 때(.moving)는 카드 안으로 돌아와 같이 움직인다. */
-.feed-screen { transform: translateZ(0); }
-.reel .fx { position: fixed; z-index: 3; opacity: var(--o, 0); }
-.page.fx-off .fx { pointer-events: none; }
-.page.fx-gone .fx { visibility: hidden; }
+/* contain: layout 은 transform 과 달리 화면 전체를 합성 레이어로 만들지 않아 글씨가 흐려지지 않는다 */
+.feed-screen { contain: layout; }
+/* 글씨 층은 손가락을 통과시켜, 글씨 위에서 넘겨도 아래 사진 칸이 스크롤된다. 버튼과 링크만 눌린다. */
+.reel .fx { position: fixed; z-index: 3; opacity: 0; visibility: hidden; pointer-events: none; transition: opacity .32s var(--ease), visibility 0s linear .32s; }
+.page.fx-on .fx { opacity: 1; visibility: visible; transition: opacity .32s var(--ease) .06s, visibility 0s; }
+.page.fx-on .fx a, .page.fx-on .fx button, .page.fx-on .swipe-cue.fx { pointer-events: auto; }
 .reel .top.fx { top: calc(var(--ft) + 12px); left: 20px; right: 20px; }
 .reel .info.fx { bottom: calc(var(--fb) + 16px); left: 20px; right: 20px; }
 .reel .rail.fx { bottom: calc(var(--fb) + 20px); right: 12px; }
