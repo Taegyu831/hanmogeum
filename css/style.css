@@ -106,6 +106,7 @@ textarea, input { -webkit-user-select: text; user-select: text; }
 .topbar .title.pad-l { padding-left: 12px; }
 .top-like { color: var(--primary); }
 .rank-tag { display: inline-flex; align-items: center; height: 22px; padding: 0 8px; margin-right: 8px; border-radius: 999px; background: var(--primary); color: #fff; font-size: 11px; line-height: 14px; font-weight: 700; }
+.rank-tag .medal { flex: none; margin: 0 3px 0 -3px; }
 .rank-tag.sm { position: absolute; top: 0; right: 0; margin: 0; height: 20px; padding: 0 7px; font-size: 11px; }
 .rec-shelf { display: flex; gap: 12px; overflow-x: auto; margin: 0 -20px; padding: 0 20px 4px; scrollbar-width: none; }
 .rec-shelf::-webkit-scrollbar { display: none; }

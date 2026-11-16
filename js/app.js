@@ -1,8 +1,8 @@
-import { state, save, reset } from "./store.js?v=11161301";
-import { AXES, Q1, Q2, Q3, prefsFromAnswers, rank, nudge, tasteType, typeBlurb, typeBars, explain } from "./reco.js?v=11161301";
-import { createNav, swallowClick } from "./nav.js?v=11161301";
-import { buzz, burst } from "./fx.js?v=11161301";
-import { C, logoSVG, pourLogo, glyph, drinkArt, drinkPhoto, icon, stepGlass, reduceMotion, FOS, level3, jarIcon, lemonIcon, bubbleGlass, pourGlass, LEVEL_WORD, emptyGlass } from "./brand.js?v=11161301";
+import { state, save, reset } from "./store.js?v=11161421";
+import { AXES, Q1, Q2, Q3, prefsFromAnswers, rank, nudge, tasteType, typeBlurb, typeBars, explain } from "./reco.js?v=11161421";
+import { createNav, swallowClick } from "./nav.js?v=11161421";
+import { buzz, burst } from "./fx.js?v=11161421";
+import { C, logoSVG, pourLogo, glyph, drinkArt, drinkPhoto, icon, stepGlass, reduceMotion, FOS, level3, jarIcon, lemonIcon, bubbleGlass, pourGlass, LEVEL_WORD, emptyGlass } from "./brand.js?v=11161421";
 
 // 화면 모습과 흐름은 안드로이드 앱(design/ui-refresh)과 같게 맞췄다.
 // 웹에서만 정한 것: 예약하기(평가용 완료 알림), 후기, 내 기록, 아래 탭 막대.
@@ -13,7 +13,7 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "
 const won = (n) => n.toLocaleString("ko-KR") + "원";
 
 /* ---------- 데이터 ---------- */
-const load = (f) => fetch(`data/${f}?v=11161301`).then((r) => r.json());
+const load = (f) => fetch(`data/${f}?v=11161421`).then((r) => r.json());
 const [DRINKS, BARS, CHIPS, SAMPLE_REVIEWS] = await Promise.all(
   ["drinks.json", "bars.json", "chips.json", "reviews.json"].map(load));
 const drinkById = Object.fromEntries(DRINKS.map((d) => [d.id, d]));
@@ -122,6 +122,17 @@ function ensureRecs() {
 const resultRank = () => rank(DRINKS, state.basePrefs || basePrefsNow(), state.answers.q2, state.answers.q3);
 // 피드는 결과 화면의 추천 1~5위로 시작하고, 그 뒤는 지금 취향(반응 반영)으로 줄 세운다.
 const TOP_N = 5;
+// 1~3위 라벨 왼쪽의 작은 금·은·동 메달 (리본 두 갈래 + 원판)
+const MEDAL = [["#E9B93A", "#B8860B"], ["#C9CDD3", "#8E949C"], ["#D69560", "#9A5B2E"]];
+const medal = (r, size = 14) => {
+  if (r < 1 || r > 3) return "";
+  const [face, edge] = MEDAL[r - 1];
+  return `<svg class="medal" width="${size}" height="${size}" viewBox="0 0 16 16" aria-hidden="true">
+    <path d="M4.2 1h3l1.4 4.6-2.6 1z" fill="#5B8DEF"/><path d="M11.8 1h-3L7.4 5.6l2.6 1z" fill="#E5534B"/>
+    <circle cx="8" cy="10.2" r="4.6" fill="${face}" stroke="${edge}" stroke-width="1.1"/>
+    <path d="M8 7.9l.7 1.4 1.5.2-1.1 1.1.3 1.5L8 11.4l-1.4.7.3-1.5-1.1-1.1 1.5-.2z" fill="#fff" opacity=".85"/></svg>`;
+};
+const rankTag = (r, label, cls = "") => `<span class="rank-tag ${cls}" aria-label="추천 ${r}위">${medal(r)}${label}</span>`;
 const topRecs = () => resultRank().slice(0, TOP_N);
 const recRankOf = (id) => topRecs().indexOf(id) + 1; // 1~5위가 아니면 0
 function feedOrder() {
@@ -601,7 +612,7 @@ function reelHTML(d, i, total) {
     <div class="page-behind" aria-hidden="true">${icon.chevronLeft(22)}맛 카드</div>
     <article class="reel" style="--tint:${TINT[d.category] || C.surfaceVariant}" aria-label="${esc(d.name)}">
       <div class="top fx"><span class="cat">${esc(d.category)}</span><span class="grow"></span>
-        ${(() => { const r = recRankOf(d.id); return r ? `<span class="rank-tag" aria-label="추천 ${r}위">추천 ${r}위</span>` : ""; })()}
+        ${(() => { const r = recRankOf(d.id); return r ? rankTag(r, `추천 ${r}위`) : ""; })()}
         <span class="count" aria-label="${total}잔 중 ${i + 1}번째">${i + 1} / ${total}</span></div>
       <div class="visual"><span class="glow" aria-hidden="true"></span>${drinkPhoto(d, 210, 300, i > 1)}</div>
       <button class="swipe-cue fx" data-open aria-label="${esc(d.name)} 맛 카드 열기. 왼쪽으로 밀어도 열려요">
@@ -1428,7 +1439,7 @@ function log() {
         </div>
         ${top.length ? `<div><h2 class="t-tm" style="margin-bottom:12px">추천받은 술</h2>
           <div class="rec-shelf">${top.map((d, k) => `<a class="rec-tile press" href="#/card/${d.id}" aria-label="추천 ${k + 1}위 ${esc(d.name)}">
-            <span class="rec-ph">${drinkPhoto(d, 64, 92, true)}<span class="rank-tag sm">${k + 1}위</span></span>
+            <span class="rec-ph">${drinkPhoto(d, 64, 92, true)}${rankTag(k + 1, `${k + 1}위`, "sm")}</span>
             <span class="t-bs nm">${esc(d.name)}</span></a>`).join("")}</div></div>` : ""}
         <div><h2 class="t-tm" style="margin-bottom:8px">끌린 술 ${liked.length}</h2>
           ${liked.length ? liked.map((d) => mini(d, `“${d.oneLine}”`)).join("") : `<p class="t-bm c-v">피드에서 끌려요를 누르면 여기 모여요.</p>`}</div>
