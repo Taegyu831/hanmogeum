@@ -1,8 +1,8 @@
-import { state, save, reset } from "./store.js?v=11161234";
-import { AXES, Q1, Q2, Q3, prefsFromAnswers, rank, nudge, tasteType, typeBlurb, typeBars, explain } from "./reco.js?v=11161234";
-import { createNav, swallowClick } from "./nav.js?v=11161234";
-import { buzz, burst } from "./fx.js?v=11161234";
-import { C, logoSVG, pourLogo, glyph, drinkArt, drinkPhoto, icon, stepGlass, reduceMotion, FOS, level3, jarIcon, lemonIcon, bubbleGlass, pourGlass, LEVEL_WORD, emptyGlass } from "./brand.js?v=11161234";
+import { state, save, reset } from "./store.js?v=11161240";
+import { AXES, Q1, Q2, Q3, prefsFromAnswers, rank, nudge, tasteType, typeBlurb, typeBars, explain } from "./reco.js?v=11161240";
+import { createNav, swallowClick } from "./nav.js?v=11161240";
+import { buzz, burst } from "./fx.js?v=11161240";
+import { C, logoSVG, pourLogo, glyph, drinkArt, drinkPhoto, icon, stepGlass, reduceMotion, FOS, level3, jarIcon, lemonIcon, bubbleGlass, pourGlass, LEVEL_WORD, emptyGlass } from "./brand.js?v=11161240";
 
 // 화면 모습과 흐름은 안드로이드 앱(design/ui-refresh)과 같게 맞췄다.
 // 웹에서만 정한 것: 예약하기(평가용 완료 알림), 후기, 내 기록, 아래 탭 막대.
@@ -13,7 +13,7 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "
 const won = (n) => n.toLocaleString("ko-KR") + "원";
 
 /* ---------- 데이터 ---------- */
-const load = (f) => fetch(`data/${f}?v=11161234`).then((r) => r.json());
+const load = (f) => fetch(`data/${f}?v=11161240`).then((r) => r.json());
 const [DRINKS, BARS, CHIPS, SAMPLE_REVIEWS] = await Promise.all(
   ["drinks.json", "bars.json", "chips.json", "reviews.json"].map(load));
 const drinkById = Object.fromEntries(DRINKS.map((d) => [d.id, d]));
@@ -113,13 +113,21 @@ function ensureRecs() {
   if (!state.prefs) {
     state.prefs = state.basePrefs = basePrefsNow();
     state.fb = [];
-    state.order = rank(DRINKS, state.prefs, state.answers.q2, state.answers.q3);
+    state.order = feedOrder();
     save();
   }
-  if (!state.order.length) state.order = rank(DRINKS, state.prefs, state.answers.q2, state.answers.q3);
+  if (!state.order.length) state.order = feedOrder();
 }
 // 결과 화면 순위 (처음 답 기준, 반응으로 바뀌지 않음)
 const resultRank = () => rank(DRINKS, state.basePrefs || basePrefsNow(), state.answers.q2, state.answers.q3);
+// 피드는 결과 화면의 추천 1~5위로 시작하고, 그 뒤는 지금 취향(반응 반영)으로 줄 세운다.
+const TOP_N = 5;
+const topRecs = () => resultRank().slice(0, TOP_N);
+const recRankOf = (id) => topRecs().indexOf(id) + 1; // 1~5위가 아니면 0
+function feedOrder() {
+  const top = topRecs();
+  return [...top, ...rank(DRINKS.filter((d) => !top.includes(d.id)), state.prefs, state.answers.q2, state.answers.q3)];
+}
 const typeName = () => presetType()?.name || (state.answers.q1.length ? tasteType(state.prefs || prefsFromAnswers(state.answers.q1)) : "골고루 탐험파");
 const reasonText = (d) => explain(d, state.answers).why.join(" ");
 const cautionText = (d) => explain(d, state.answers).risk[0] || "";
@@ -479,7 +487,7 @@ function result() {
   state.liked = state.liked.filter((id) => state.fb.some((e) => e.id === id));
   state.passed = [];
   recompute();
-  state.order = rank(DRINKS, state.prefs, a.q2, a.q3);
+  state.order = feedOrder();
   state.feedIndex = 0;
   save();
   dropFeed();
@@ -555,7 +563,7 @@ function result() {
       if (on) { buzz(10); burst(b.querySelector(".pop-heart"), app, HEART_SPARKS); }
     }));
     el.querySelector("[data-go-feed]").addEventListener("click", () => {
-      state.order = rank(DRINKS, state.prefs, a.q2, a.q3);
+      state.order = feedOrder();
       state.feedIndex = 0;
       save();
       dropFeed();
@@ -590,6 +598,7 @@ function reelHTML(d, i, total) {
     <div class="page-behind" aria-hidden="true">${icon.chevronLeft(22)}맛 카드</div>
     <article class="reel" style="--tint:${TINT[d.category] || C.surfaceVariant}" aria-label="${esc(d.name)}">
       <div class="top fx"><span class="cat">${esc(d.category)}</span><span class="grow"></span>
+        ${(() => { const r = recRankOf(d.id); return r ? `<span class="rank-tag" aria-label="추천 ${r}위">추천 ${r}위</span>` : ""; })()}
         <span class="count" aria-label="${total}잔 중 ${i + 1}번째">${i + 1} / ${total}</span></div>
       <div class="visual"><span class="glow" aria-hidden="true"></span>${drinkPhoto(d, 210, 300, i > 1)}</div>
       <button class="swipe-cue fx" data-open aria-label="${esc(d.name)} 맛 카드 열기. 왼쪽으로 밀어도 열려요">
@@ -696,7 +705,9 @@ function feed() {
       requestAnimationFrame(() => requestAnimationFrame(() => el._fxRefresh()));
 
       // 이미 본 잔은 그대로 두고, 다음 잔들만 지금 취향으로 다시 줄 세운다.
-      const rerankAfter = (i) => {
+      const rerankAfter = (i0) => {
+        // 추천 1~5위는 반응과 상관없이 맨 앞 다섯 잔으로 고정한다
+        const i = Math.max(i0, Math.min(TOP_N, state.order.length) - 1);
         const headIds = state.order.slice(0, i + 1);
         const rest = DRINKS.filter((d) => !headIds.includes(d.id));
         let tail = rank(rest, state.prefs, state.answers.q2, state.answers.q3);
@@ -1395,6 +1406,7 @@ function log() {
     <span class="c-v" style="display:grid">${icon.chevronRight()}</span></a>`;
   const liked = state.liked.map((id) => drinkById[id]).filter(Boolean);
   const rsv = (state.reservations || []).filter((r) => drinkById[r.drinkId] && barById[r.barId]);
+  const top = state.answers.q1.length || state.preset ? topRecs().map((id) => drinkById[id]).filter(Boolean) : [];
   return {
     html: `<section class="screen">
       ${topbar("내 기록", { noBack: true })}
@@ -1409,6 +1421,10 @@ function log() {
           <a class="btn btn-s" href="#/q/1">취향 다시 찾기</a>
           <a class="btn-t" href="#/types" style="align-self:center">다른 유형 둘러보기</a>
         </div>
+        ${top.length ? `<div><h2 class="t-tm" style="margin-bottom:12px">추천받은 술</h2>
+          <div class="rec-shelf">${top.map((d, k) => `<a class="rec-tile press" href="#/card/${d.id}" aria-label="추천 ${k + 1}위 ${esc(d.name)}">
+            <span class="rec-ph">${drinkPhoto(d, 64, 92, true)}<span class="rank-tag sm">${k + 1}위</span></span>
+            <span class="t-bs nm">${esc(d.name)}</span></a>`).join("")}</div></div>` : ""}
         <div><h2 class="t-tm" style="margin-bottom:8px">끌린 술 ${liked.length}</h2>
           ${liked.length ? liked.map((d) => mini(d, `“${d.oneLine}”`)).join("") : `<p class="t-bm c-v">피드에서 끌려요를 누르면 여기 모여요.</p>`}</div>
         <div><h2 class="t-tm" style="margin-bottom:8px">예약한 곳 ${rsv.length}</h2>

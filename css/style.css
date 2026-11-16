@@ -105,6 +105,13 @@ textarea, input { -webkit-user-select: text; user-select: text; }
 .topbar .title { flex: 1; font-size: 18px; line-height: 26px; font-weight: 700; padding-left: 4px; }
 .topbar .title.pad-l { padding-left: 12px; }
 .top-like { color: var(--primary); }
+.rank-tag { display: inline-flex; align-items: center; height: 22px; padding: 0 8px; margin-right: 8px; border-radius: 999px; background: var(--primary); color: #fff; font-size: 11px; line-height: 14px; font-weight: 700; }
+.rank-tag.sm { position: absolute; top: 0; right: 0; margin: 0; height: 20px; padding: 0 7px; font-size: 11px; }
+.rec-shelf { display: flex; gap: 12px; overflow-x: auto; margin: 0 -20px; padding: 0 20px 4px; scrollbar-width: none; }
+.rec-shelf::-webkit-scrollbar { display: none; }
+.rec-tile { flex: none; width: 84px; display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; color: inherit; }
+.rec-ph { position: relative; width: 84px; height: 104px; display: grid; place-items: end center; padding-bottom: 6px; border-radius: 16px; background: var(--primary-c); }
+.rec-tile .nm { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .bar-name { display: flex; align-items: center; gap: 4px; }
 .bar-name .pin-ic { display: grid; color: var(--primary); margin-left: -2px; }
 .bar-name .pin-ic svg circle { fill: var(--bg); }
