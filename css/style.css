@@ -112,6 +112,9 @@ textarea, input { -webkit-user-select: text; user-select: text; }
 .rec-tile { flex: none; width: 84px; display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; color: inherit; }
 .rec-ph { position: relative; width: 84px; height: 104px; display: grid; place-items: end center; padding-bottom: 6px; border-radius: 16px; background: var(--primary-c); }
 .rec-tile .nm { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.bar-photo { display: block; width: 100%; aspect-ratio: 16 / 9; border-radius: 14px; overflow: hidden; background: var(--surface-v); }
+.bar-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.bar-photo.hero { aspect-ratio: 4 / 3; border-radius: 16px; }
 .bar-name { display: flex; align-items: center; gap: 4px; }
 .bar-name .pin-ic { display: grid; color: var(--primary); margin-left: -2px; }
 .bar-name .pin-ic svg circle { fill: var(--bg); }
