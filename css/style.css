@@ -176,6 +176,21 @@ strong.kw { font-weight: 700; color: var(--on-surface); }
 .start .brand { font-size: 38px; line-height: 46px; font-weight: 700; letter-spacing: -0.03em; color: var(--primary); margin-top: 32px; }
 .start .lead { font-size: 18px; line-height: 26px; font-weight: 500; color: var(--on-surface-v); margin-top: 8px; }
 .start .actions { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+/* 시연용 로그인 */
+.login { width: 100%; display: flex; flex-direction: column; gap: 10px; }
+.btn.sns { gap: 8px; font-weight: 700; }
+.btn.sns.kakao { background: #FEE500; color: #191919; }
+.btn.sns.naver { background: #03C75A; color: #fff; }
+.demo-hint { min-height: 18px; font-size: 12px; line-height: 18px; color: var(--primary); text-align: center; }
+.btn.demo.nudge { animation: demoNudge .9s cubic-bezier(.3, 1.4, .5, 1); }
+@keyframes demoNudge { 0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(139, 39, 68, .45); } 30% { transform: scale(1.05); } 60% { transform: scale(.98); } 100% { transform: scale(1); box-shadow: 0 0 0 14px rgba(139, 39, 68, 0); } }
+/* 글자가 아래에서 스르륵 떠오르며 나타난다 (차례대로) */
+.rise { animation: riseIn .55s cubic-bezier(.2, .7, .3, 1) both; animation-delay: calc(var(--d, 0) * 70ms + 80ms); }
+@keyframes riseIn { from { opacity: 0; transform: translateY(16px); } }
+.lv-list { display: flex; flex-direction: column; }
+.lv-row { display: flex; align-items: center; gap: 14px; padding: 14px 20px; margin: 0 -20px; border-bottom: 1px solid var(--divider); text-align: left; }
+.lv-row b { font-size: 17px; line-height: 24px; font-weight: 700; }
+.lv-row[aria-checked="true"] { background: #FBEFF3; }
 
 /* ---------- 질문 ---------- */
 .q-head { padding: env(safe-area-inset-top) 8px 0; flex: none; }
