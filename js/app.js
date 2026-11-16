@@ -1,8 +1,8 @@
-import { state, save, reset } from "./store.js?v=11160911";
-import { AXES, Q1, Q2, Q3, prefsFromAnswers, rank, nudge, tasteType, typeBlurb, typeBars, explain } from "./reco.js?v=11160911";
-import { createNav, swallowClick } from "./nav.js?v=11160911";
-import { buzz, burst } from "./fx.js?v=11160911";
-import { C, logoSVG, pourLogo, glyph, drinkArt, drinkPhoto, icon, stepGlass, reduceMotion, FOS, level3, jarIcon, lemonIcon, bubbleGlass, pourGlass, LEVEL_WORD, emptyGlass } from "./brand.js?v=11160911";
+import { state, save, reset } from "./store.js?v=11160913";
+import { AXES, Q1, Q2, Q3, prefsFromAnswers, rank, nudge, tasteType, typeBlurb, typeBars, explain } from "./reco.js?v=11160913";
+import { createNav, swallowClick } from "./nav.js?v=11160913";
+import { buzz, burst } from "./fx.js?v=11160913";
+import { C, logoSVG, pourLogo, glyph, drinkArt, drinkPhoto, icon, stepGlass, reduceMotion, FOS, level3, jarIcon, lemonIcon, bubbleGlass, pourGlass, LEVEL_WORD, emptyGlass } from "./brand.js?v=11160913";
 
 // 화면 모습과 흐름은 안드로이드 앱(design/ui-refresh)과 같게 맞췄다.
 // 웹에서만 정한 것: 예약하기(평가용 완료 알림), 후기, 내 기록, 아래 탭 막대.
@@ -13,7 +13,7 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "
 const won = (n) => n.toLocaleString("ko-KR") + "원";
 
 /* ---------- 데이터 ---------- */
-const load = (f) => fetch(`data/${f}?v=11160911`).then((r) => r.json());
+const load = (f) => fetch(`data/${f}?v=11160913`).then((r) => r.json());
 const [DRINKS, BARS, CHIPS, SAMPLE_REVIEWS] = await Promise.all(
   ["drinks.json", "bars.json", "chips.json", "reviews.json"].map(load));
 const drinkById = Object.fromEntries(DRINKS.map((d) => [d.id, d]));
@@ -608,9 +608,8 @@ function endHTML() {
     ${emptyGlass(72)}
     <h2 class="t-hl" style="font-size:24px;line-height:32px">추천을 다 둘러봤어요</h2>
     <p class="t-bl c-v">${liked.length ? `끌린 술 ${liked.length}잔, 이제 근처에서 10~30mL로 맛볼 차례예요.` : "끌린 술이 없었다면 취향을 다시 골라 보거나, 근처 바에서 둘러보세요."}</p>
-    ${liked.length ? `<div class="row gap8">${liked.slice(0, 4).map((d) => drinkArt(d, 48, 64)).join("")}</div>` : ""}
     <a class="btn btn-p" href="#/nearby">${liked.length ? "끌린 술 맛보러 가기" : "근처 바 둘러보기"}</a>
-    <div class="row">${liked.length ? `<button class="btn-t" data-show-liked>끌린 술 보기</button>` : ""}<a class="btn-t v" href="#/q/1">취향 다시 고르기</a></div>
+    <a class="btn-t v" href="#/q/1">취향 다시 고르기</a>
   </div></div>`;
 }
 function feedHead() {
