@@ -1,8 +1,8 @@
-import { state, save, reset } from "./store.js?v=11160922";
-import { AXES, Q1, Q2, Q3, prefsFromAnswers, rank, nudge, tasteType, typeBlurb, typeBars, explain } from "./reco.js?v=11160922";
-import { createNav, swallowClick } from "./nav.js?v=11160922";
-import { buzz, burst } from "./fx.js?v=11160922";
-import { C, logoSVG, pourLogo, glyph, drinkArt, drinkPhoto, icon, stepGlass, reduceMotion, FOS, level3, jarIcon, lemonIcon, bubbleGlass, pourGlass, LEVEL_WORD, emptyGlass } from "./brand.js?v=11160922";
+import { state, save, reset } from "./store.js?v=11160928";
+import { AXES, Q1, Q2, Q3, prefsFromAnswers, rank, nudge, tasteType, typeBlurb, typeBars, explain } from "./reco.js?v=11160928";
+import { createNav, swallowClick } from "./nav.js?v=11160928";
+import { buzz, burst } from "./fx.js?v=11160928";
+import { C, logoSVG, pourLogo, glyph, drinkArt, drinkPhoto, icon, stepGlass, reduceMotion, FOS, level3, jarIcon, lemonIcon, bubbleGlass, pourGlass, LEVEL_WORD, emptyGlass } from "./brand.js?v=11160928";
 
 // 화면 모습과 흐름은 안드로이드 앱(design/ui-refresh)과 같게 맞췄다.
 // 웹에서만 정한 것: 예약하기(평가용 완료 알림), 후기, 내 기록, 아래 탭 막대.
@@ -13,7 +13,7 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "
 const won = (n) => n.toLocaleString("ko-KR") + "원";
 
 /* ---------- 데이터 ---------- */
-const load = (f) => fetch(`data/${f}?v=11160922`).then((r) => r.json());
+const load = (f) => fetch(`data/${f}?v=11160928`).then((r) => r.json());
 const [DRINKS, BARS, CHIPS, SAMPLE_REVIEWS] = await Promise.all(
   ["drinks.json", "bars.json", "chips.json", "reviews.json"].map(load));
 const drinkById = Object.fromEntries(DRINKS.map((d) => [d.id, d]));
@@ -75,14 +75,14 @@ function cheapest(id) {
 }
 const priceTag = (id) => { const c = cheapest(id); return c ? `${c.ml}mL ${won(c.price)}부터` : ""; };
 // 줄글 대신 한눈에: 단맛(꿀단지), 신맛(레몬), 탄산(잔 속 기포), 따른 색
-function tasteIcons(d) {
+function tasteIcons(d, k = 1) {
   const sw = level3(d.taste.sweet), so = level3(d.taste.sour), fz = level3(d.taste.fizz);
   const three = (n, f) => [0, 1, 2].map((k) => f(k < n)).join("");
   return `<div class="tastes" role="img" aria-label="단맛 ${LEVEL_WORD[sw]}, 신맛 ${LEVEL_WORD[so]}, 탄산 ${LEVEL_WORD[fz]}">
-    <div class="tc"><span class="ics">${three(sw, (on) => jarIcon(on, 24))}</span><span class="lb">단맛</span></div>
-    <div class="tc"><span class="ics">${three(so, (on) => lemonIcon(on, 24))}</span><span class="lb">신맛</span></div>
-    <div class="tc"><span class="ics">${bubbleGlass(fz, 28)}</span><span class="lb">탄산 ${LEVEL_WORD[fz]}</span></div>
-    <div class="tc"><span class="ics">${pourGlass(d, 28)}</span><span class="lb">따른 색</span></div>
+    <div class="tc"><span class="ics">${three(sw, (on) => jarIcon(on, Math.round(24 * k)))}</span><span class="lb">단맛</span></div>
+    <div class="tc"><span class="ics">${three(so, (on) => lemonIcon(on, Math.round(24 * k)))}</span><span class="lb">신맛</span></div>
+    <div class="tc"><span class="ics">${bubbleGlass(fz, Math.round(28 * k))}</span><span class="lb">탄산 ${LEVEL_WORD[fz]}</span></div>
+    <div class="tc"><span class="ics">${pourGlass(d, Math.round(28 * k))}</span><span class="lb">따른 색</span></div>
   </div>`;
 }
 const CATEGORIES = [...new Set(BARS.flatMap((b) => catsOf(b)))];
@@ -591,7 +591,7 @@ function reelHTML(d, i, total) {
         <h2 class="name">${esc(d.name)}</h2>
         <p class="meta">${esc(d.category)} · ${esc(d.abvLabel)}</p>
         <p class="one">“${esc(d.oneLine)}”</p>
-        ${tasteIcons(d)}
+        ${tasteIcons(d, 0.85)}
         ${n ? `<a class="try-pill" href="#/nearby/${d.id}" aria-label="${esc(d.name)}, ${priceTag(d.id)}, 근처 ${n}곳에서 맛보기. 바 보기">${icon.pin(16)}<b>${priceTag(d.id)}</b><span>· 근처 ${n}곳</span>${icon.chevronRight(14, 14)}</a>` : ""}
         ${i === 0 ? `<p class="first-hint">위로 넘기면 다음 잔 · 왼쪽으로 밀면 맛 카드</p>` : ""}
       </div>
@@ -782,16 +782,48 @@ function feed() {
 // 카드를 왼쪽으로 밀면 손가락을 따라오고, 96px 넘게 밀면 맛 카드가 열린다. 오른쪽은 살짝만 버틴다.
 function dragReel(reel, open) {
   let s = null;
+  const pager = reel.closest(".pager");
+  // 글씨 층은 화면에 고정돼 있어 브라우저가 그 위의 세로 스크롤을 피드로 넘겨주지 않는다.
+  // 그래서 글씨 위에서 시작한 세로 밀기는 여기서 직접 피드를 움직이고, 손을 떼면 다음/이전 잔에 맞춘다.
+  const vMove = (e) => {
+    const dy = e.clientY - s.y;
+    pager.scrollTop = s.top0 - dy;
+    const now = performance.now();
+    s.vel = (e.clientY - s.ly) / Math.max(1, now - s.lt);
+    s.ly = e.clientY; s.lt = now;
+  };
+  const vEnd = (dy) => {
+    const H = pager.clientHeight, base = Math.round(s.top0 / H);
+    const pages = pager.querySelectorAll(".page");
+    let k = base;
+    if (dy < -H * 0.18 || s.vel < -0.35) k = base + 1;
+    else if (dy > H * 0.18 || s.vel > 0.35) k = base - 1;
+    k = Math.max(0, Math.min(pages.length - 1, k));
+    pager.scrollTo({ top: pages[k].offsetTop, behavior: reduceMotion() ? "auto" : "smooth" });
+    setTimeout(() => (pager.style.scrollSnapType = ""), 520);
+  };
   reel.addEventListener("pointerdown", (e) => {
-    if (e.target.closest("button, a")) return;
-    s = { id: e.pointerId, x: e.clientX, y: e.clientY, dx: 0, on: false };
+    const onFx = !!e.target.closest(".fx");
+    if (e.target.closest("button, a") && !onFx) return;
+    s = { id: e.pointerId, x: e.clientX, y: e.clientY, dx: 0, on: false, fx: onFx, btn: !!e.target.closest("button, a") };
   });
+  reel.querySelectorAll(".fx").forEach((f) => f.addEventListener("wheel", (e) => { e.preventDefault(); pager.scrollBy({ top: e.deltaY }); }, { passive: false }));
   reel.addEventListener("pointermove", (e) => {
     if (!s || e.pointerId !== s.id) return;
+    if (s.v) { vMove(e); return; }
     const dx = e.clientX - s.x, dy = e.clientY - s.y;
     if (!s.on) {
       if (Math.hypot(dx, dy) < 10) return;
-      if (Math.abs(dx) < Math.abs(dy) * 1.2) { s = null; return; }
+      if (Math.abs(dx) < Math.abs(dy) * 1.2) {
+        if (!s.fx || !pager) { s = null; return; }
+        s.v = true; s.top0 = pager.scrollTop; s.ly = e.clientY; s.lt = performance.now(); s.vel = 0;
+        pager.style.scrollSnapType = "none";
+        try { reel.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+        swallowClick(reel);
+        vMove(e);
+        return;
+      }
+      if (s.btn) { s = null; return; }
       s.on = true;
       try { reel.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
       reel.style.transition = "none";
@@ -802,6 +834,7 @@ function dragReel(reel, open) {
   });
   const end = (e) => {
     if (!s || e.pointerId !== s.id) return;
+    if (s.v) { const dy = e.clientY - s.y; vEnd(dy); s = null; return; }
     const { on, dx } = s;
     s = null;
     if (!on) return;

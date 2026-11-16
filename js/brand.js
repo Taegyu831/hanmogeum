@@ -284,10 +284,27 @@ export function bubbleGlass(lv, size = 24) {
     ${B.map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r}" fill="#fff" stroke="${C.primary}" stroke-width="1.1"/>`).join("")}</svg>`;
 }
 // 잔에 따랐을 때의 색
+// 따른 색 잔: 와인은 와인잔, 막걸리는 넓고 낮은 사발, 맥주는 긴 잔, 나머지(양주, 전통주, 사케)는 손잡이 없는 기본 온더록 잔.
+// 잔 모양 안쪽을 그 술의 실제 색으로 채운다.
+const POUR = {
+  wine: { out: "M7 3h10v3A5 5 0 0 1 7 6z", fillY: 4.6, extra: "M12 11V19.5M8.8 20.5h6.4" },
+  bowl: { out: "M3 9.5h18c-.4 4.6-3.3 7.6-6.6 8H9.6C6.3 17.1 3.4 14.1 3 9.5z", fillY: 11.2, extra: "M9.6 17.5l-.5 2h5.8l-.5-2" },
+  tall: { out: "M7 3.5h10l-1.1 16.5H8.1z", fillY: 6.4, extra: "" },
+  rocks: { out: "M5.5 7h13l-1.1 12.2a.9.9 0 0 1-.9.8h-9a.9.9 0 0 1-.9-.8z", fillY: 12, extra: "M7.2 17.6h9.6" },
+};
+export function glassKind(d) {
+  if (d.category === "와인") return "wine";
+  if (d.category === "맥주") return "tall";
+  if (/막걸리/.test(d.name)) return "bowl";
+  return "rocks";
+}
 export function pourGlass(d, size = 24) {
   const col = (SPEC[d.id] || [])[1] || "#E8D48B";
+  const g = POUR[glassKind(d)], id = `pg${++uid}`;
   return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="${C.onSurfaceVariant}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M7 4.6h10V6A5 5 0 0 1 7 6z" fill="${col}" stroke="none"/><path d="M7 3h10v3A5 5 0 0 1 7 6z"/><path d="M12 11V19.5M8.8 20.5h6.4"/></svg>`;
+    <clipPath id="${id}"><path d="${g.out}"/></clipPath>
+    <rect x="0" y="${g.fillY}" width="24" height="24" fill="${col}" stroke="none" clip-path="url(#${id})"/>
+    <path d="${g.out}"/>${g.extra ? `<path d="${g.extra}"/>` : ""}</svg>`;
 }
 export const LEVEL_WORD = ["없음", "약함", "보통", "강함"];
 

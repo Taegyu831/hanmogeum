@@ -268,11 +268,11 @@ textarea, input { -webkit-user-select: text; user-select: text; }
 .reel .visual .art.photo { position: absolute; top: 4px; bottom: 14px; left: 0; right: 0; margin: auto; width: 210px !important; height: auto !important; max-width: 100%; max-height: 300px; }
 .reel .glow { width: 230px; height: 230px; border-radius: 50%; background: radial-gradient(rgba(255, 255, 255, .75), rgba(255, 255, 255, 0) 68%); }
 .reel .info { position: relative; z-index: 2; padding-right: 72px; }
-.reel .name { font-size: 24px; line-height: 32px; font-weight: 700; }
-.reel .meta { font-size: 14px; line-height: 20px; color: var(--on-surface-v); }
-.reel .one { font-size: 16px; line-height: 24px; font-weight: 500; color: var(--primary); margin-top: 6px; }
+.reel .name { font-size: 20px; line-height: 27px; font-weight: 700; }
+.reel .meta { font-size: 13px; line-height: 18px; color: var(--on-surface-v); }
+.reel .one { font-size: 14px; line-height: 20px; font-weight: 500; color: var(--primary); margin-top: 4px; }
 .reel .why { font-size: 14px; line-height: 20px; margin-top: 2px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.reel .first-hint { font-size: 12px; line-height: 18px; color: var(--on-surface-v); }
+.reel .first-hint { font-size: 11px; line-height: 16px; color: var(--on-surface-v); }
 .near-link { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; color: var(--primary); font-size: 14px; line-height: 20px; font-weight: 700; }
 /* 맛 아이콘 줄 */
 .tastes { display: grid; grid-template-columns: auto auto auto auto; justify-content: start; column-gap: 18px; margin-top: 10px; }
@@ -290,6 +290,12 @@ textarea, input { -webkit-user-select: text; user-select: text; }
   background: #F6E1E9; color: var(--primary); font-size: 12px; line-height: 18px; font-weight: 700; }
 .price-tag svg circle { fill: #F6E1E9; }
 .reel .visual { cursor: pointer; }
+.reel .tastes { column-gap: 14px; margin-top: 8px; }
+.reel .tastes .ics { height: 24px; }
+.reel .tastes .lb { font-size: 11px; line-height: 14px; }
+.reel .try-pill { min-height: 34px; margin-top: 10px; font-size: 12px; line-height: 16px; padding: 0 12px 0 10px; }
+.reel .rail-btn .ic { width: 42px; height: 42px; }
+.reel .rail-btn { font-size: 11px; }
 .card-screen, .card-screen .bottom { background: #FCEFF3; }
 /* 글씨는 제자리, 사진만 넘어간다: 글씨 층은 피드 화면 기준으로 고정되고 스크롤에 따라 흐려졌다 나타난다.
    카드를 옆으로 밀 때(.moving)는 카드 안으로 돌아와 같이 움직인다. */
@@ -298,7 +304,7 @@ textarea, input { -webkit-user-select: text; user-select: text; }
 /* 글씨 층은 손가락을 통과시켜, 글씨 위에서 넘겨도 아래 사진 칸이 스크롤된다. 버튼과 링크만 눌린다. */
 .reel .fx { position: fixed; z-index: 3; opacity: 0; visibility: hidden; pointer-events: none; transition: opacity .32s var(--ease), visibility 0s linear .32s; }
 .page.fx-on .fx { opacity: 1; visibility: visible; transition: opacity .32s var(--ease) .06s, visibility 0s; }
-.page.fx-on .fx a, .page.fx-on .fx button, .page.fx-on .swipe-cue.fx { pointer-events: auto; }
+.page.fx-on .fx { pointer-events: auto; touch-action: none; }
 .reel .top.fx { top: calc(var(--ft) + 12px); left: 20px; right: 20px; }
 .reel .info.fx { bottom: calc(var(--fb) + 16px); left: 20px; right: 20px; }
 .reel .rail.fx { bottom: calc(var(--fb) + 20px); right: 12px; }
