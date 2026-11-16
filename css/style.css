@@ -264,6 +264,8 @@ textarea, input { -webkit-user-select: text; user-select: text; }
 .reel .visual > * { grid-area: 1 / 1; }
 .reel .visual .art { background: none; border-radius: 0; max-height: 100%; }
 .reel .visual .art svg { max-height: 100%; }
+/* 화면이 짧아도 사진이 아래 글씨를 덮지 않게: 사진은 남은 칸 안에서만 줄어든다 (최대 300px) */
+.reel .visual .art.photo { position: absolute; top: 4px; bottom: 14px; left: 0; right: 0; margin: auto; width: 210px !important; height: auto !important; max-width: 100%; max-height: 300px; }
 .reel .glow { width: 230px; height: 230px; border-radius: 50%; background: radial-gradient(rgba(255, 255, 255, .75), rgba(255, 255, 255, 0) 68%); }
 .reel .info { position: relative; z-index: 2; padding-right: 72px; }
 .reel .name { font-size: 24px; line-height: 32px; font-weight: 700; }
