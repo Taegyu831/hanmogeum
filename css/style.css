@@ -247,7 +247,7 @@ textarea, input { -webkit-user-select: text; user-select: text; }
 .head-btn { min-height: 48px; display: inline-flex; align-items: center; gap: 4px; padding: 0 12px; border-radius: 999px; color: var(--primary); font-size: 14px; font-weight: 500; flex: none; }
 .head-btn.sm { padding: 0 8px; gap: 2px; }
 .head-btn:active { background: rgba(139, 39, 68, .08); }
-.pager { flex: 1; min-height: 0; overflow-y: auto; scroll-snap-type: y mandatory; overscroll-behavior: contain; scrollbar-width: none; }
+.pager { position: relative; flex: 1; min-height: 0; overflow-y: auto; scroll-snap-type: y mandatory; overscroll-behavior: contain; scrollbar-width: none; }
 .pager::-webkit-scrollbar { display: none; }
 .page { position: relative; height: 100%; scroll-snap-align: start; scroll-snap-stop: always; background: var(--primary-c); overflow: hidden; }
 .page[data-end] { background: var(--bg); padding: 8px 16px; }

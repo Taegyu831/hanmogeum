@@ -1,8 +1,8 @@
-import { state, save, reset } from "./store.js?v=11160928";
-import { AXES, Q1, Q2, Q3, prefsFromAnswers, rank, nudge, tasteType, typeBlurb, typeBars, explain } from "./reco.js?v=11160928";
-import { createNav, swallowClick } from "./nav.js?v=11160928";
-import { buzz, burst } from "./fx.js?v=11160928";
-import { C, logoSVG, pourLogo, glyph, drinkArt, drinkPhoto, icon, stepGlass, reduceMotion, FOS, level3, jarIcon, lemonIcon, bubbleGlass, pourGlass, LEVEL_WORD, emptyGlass } from "./brand.js?v=11160928";
+import { state, save, reset } from "./store.js?v=11160933";
+import { AXES, Q1, Q2, Q3, prefsFromAnswers, rank, nudge, tasteType, typeBlurb, typeBars, explain } from "./reco.js?v=11160933";
+import { createNav, swallowClick } from "./nav.js?v=11160933";
+import { buzz, burst } from "./fx.js?v=11160933";
+import { C, logoSVG, pourLogo, glyph, drinkArt, drinkPhoto, icon, stepGlass, reduceMotion, FOS, level3, jarIcon, lemonIcon, bubbleGlass, pourGlass, LEVEL_WORD, emptyGlass } from "./brand.js?v=11160933";
 
 // 화면 모습과 흐름은 안드로이드 앱(design/ui-refresh)과 같게 맞췄다.
 // 웹에서만 정한 것: 예약하기(평가용 완료 알림), 후기, 내 기록, 아래 탭 막대.
@@ -13,7 +13,7 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "
 const won = (n) => n.toLocaleString("ko-KR") + "원";
 
 /* ---------- 데이터 ---------- */
-const load = (f) => fetch(`data/${f}?v=11160928`).then((r) => r.json());
+const load = (f) => fetch(`data/${f}?v=11160933`).then((r) => r.json());
 const [DRINKS, BARS, CHIPS, SAMPLE_REVIEWS] = await Promise.all(
   ["drinks.json", "bars.json", "chips.json", "reviews.json"].map(load));
 const drinkById = Object.fromEntries(DRINKS.map((d) => [d.id, d]));
@@ -674,7 +674,18 @@ function feed() {
       };
       el._fxRefresh = () => { measure(); fade(); };
       pager.addEventListener("scroll", () => { if (!fadeQ) fadeQ = requestAnimationFrame(fade); }, { passive: true });
-      new ResizeObserver(() => el._fxRefresh()).observe(pager);
+      // 주소창이 접히거나 펴져 피드 높이가 바뀌면, 보고 있던 잔에 정확히 다시 맞춘다
+      let lastH = pager.clientHeight;
+      new ResizeObserver(() => {
+        const H = pager.clientHeight;
+        if (H && H !== lastH) {
+          const k = Math.round(pager.scrollTop / (lastH || H));
+          lastH = H;
+          const pg = pager.querySelectorAll(".page")[k];
+          if (pg) pager.scrollTop = pg.offsetTop;
+        }
+        el._fxRefresh();
+      }).observe(pager);
       requestAnimationFrame(() => requestAnimationFrame(() => el._fxRefresh()));
 
       // 이미 본 잔은 그대로 두고, 다음 잔들만 지금 취향으로 다시 줄 세운다.
@@ -799,8 +810,16 @@ function dragReel(reel, open) {
     if (dy < -H * 0.18 || s.vel < -0.35) k = base + 1;
     else if (dy > H * 0.18 || s.vel > 0.35) k = base - 1;
     k = Math.max(0, Math.min(pages.length - 1, k));
-    pager.scrollTo({ top: pages[k].offsetTop, behavior: reduceMotion() ? "auto" : "smooth" });
-    setTimeout(() => (pager.style.scrollSnapType = ""), 520);
+    const target = pages[k].offsetTop;
+    pager.scrollTo({ top: target, behavior: reduceMotion() ? "auto" : "smooth" });
+    // 부드러운 이동이 끝나면 정확한 자리에 한 번 더 맞추고 스냅을 되돌린다
+    let tries = 0;
+    const settle = () => {
+      if (Math.abs(pager.scrollTop - target) > 1 && tries++ < 40) return setTimeout(settle, 30);
+      pager.scrollTop = target;
+      pager.style.scrollSnapType = "";
+    };
+    setTimeout(settle, 120);
   };
   reel.addEventListener("pointerdown", (e) => {
     const onFx = !!e.target.closest(".fx");
