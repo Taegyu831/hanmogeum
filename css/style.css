@@ -455,6 +455,9 @@ strong.kw { font-weight: 700; color: var(--on-surface); }
 
 .menu .pick { width: 100%; padding: 12px 0; display: flex; align-items: center; gap: 12px; }
 
+.menu .chk { flex: none; width: 24px; height: 24px; border-radius: 7px; border: 2px solid var(--outline); display: grid; place-items: center; color: transparent; transition: background-color .18s, border-color .18s, color .18s; }
+.menu .pick[aria-checked="true"] .chk { background: var(--primary); border-color: var(--primary); color: #fff; }
+.sel-sum { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .menu .more { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .22s var(--ease); }
 .menu .more > div { overflow: hidden; }
 .menu[aria-checked="true"] .more { grid-template-rows: 1fr; }

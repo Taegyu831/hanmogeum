@@ -1,8 +1,8 @@
-import { state, save, reset } from "./store.js?v=11161547";
-import { AXES, Q1, Q2, Q3, prefsFromAnswers, rank, nudge, tasteType, typeBlurb, typeBars, explain } from "./reco.js?v=11161547";
-import { createNav, swallowClick } from "./nav.js?v=11161547";
-import { buzz, burst } from "./fx.js?v=11161547";
-import { C, logoSVG, pourLogo, glyph, drinkArt, drinkPhoto, icon, stepGlass, reduceMotion, FOS, level3, jarIcon, lemonIcon, bubbleGlass, pourGlass, LEVEL_WORD, emptyGlass } from "./brand.js?v=11161547";
+import { state, save, reset } from "./store.js?v=11171442";
+import { AXES, Q1, Q2, Q3, prefsFromAnswers, rank, nudge, tasteType, typeBlurb, typeBars, explain } from "./reco.js?v=11171442";
+import { createNav, swallowClick } from "./nav.js?v=11171442";
+import { buzz, burst } from "./fx.js?v=11171442";
+import { C, logoSVG, pourLogo, glyph, drinkArt, drinkPhoto, icon, stepGlass, reduceMotion, FOS, level3, jarIcon, lemonIcon, bubbleGlass, pourGlass, LEVEL_WORD, emptyGlass } from "./brand.js?v=11171442";
 
 // 화면 모습과 흐름은 안드로이드 앱(design/ui-refresh)과 같게 맞췄다.
 // 웹에서만 정한 것: 예약하기(평가용 완료 알림), 후기, 내 기록, 아래 탭 막대.
@@ -13,7 +13,7 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "
 const won = (n) => n.toLocaleString("ko-KR") + "원";
 
 /* ---------- 데이터 ---------- */
-const load = (f) => fetch(`data/${f}?v=11161547`).then((r) => r.json());
+const load = (f) => fetch(`data/${f}?v=11171442`).then((r) => r.json());
 const [DRINKS, BARS, CHIPS, SAMPLE_REVIEWS] = await Promise.all(
   ["drinks.json", "bars.json", "chips.json", "reviews.json"].map(load));
 const drinkById = Object.fromEntries(DRINKS.map((d) => [d.id, d]));
@@ -1206,7 +1206,8 @@ function nearby({ parts }) {
 }
 
 /* ---------- C. 바 정보 ---------- */
-const barSel = {}; // 바마다 고른 메뉴를 기억한다
+const barSel = {}; // 바마다 고른 메뉴들(여러 개)을 기억한다: { 바 id: [메뉴 id, ...] }
+const selOf = (bid) => (barSel[bid] ||= []);
 const barExpanded = new Set();
 function bar({ parts, q }) {
   ensureRecs();
@@ -1214,20 +1215,23 @@ function bar({ parts, q }) {
   if (!b) { go("#/nearby", { replace: true }); return null; }
   const ms = menusOf(b);
   const want = q.get("drink");
-  if (want && menuById(barSel[b.id] || "")?.drinkId !== want) barSel[b.id] = ms.find((m) => m.drinkId === want)?.id || null;
+  if (want) {
+    const wm = ms.find((m) => m.drinkId === want);
+    if (wm && !selOf(b.id).some((id) => menuById(id)?.drinkId === want)) selOf(b.id).push(wm.id);
+  }
   const focus = want ? drinkById[want] : null;
   const menuCard = (m) => {
     const d = m.drink;
-    const sel = barSel[b.id] === m.id;
+    const sel = selOf(b.id).includes(m.id);
     const exp = barExpanded.has(m.id);
     const why = d ? reasonText(d) : "";
     return `<div class="menu" aria-checked="${sel}" data-expanded="${exp}" data-menu="${m.id}">
-      <button class="pick" role="radio" aria-checked="${sel}" data-pick="${m.id}">
+      <button class="pick" role="checkbox" aria-checked="${sel}" data-pick="${m.id}">
         ${d ? drinkArt(d, 48, 64) : ""}
         <span class="grow stack" style="gap:2px"><span class="t-ts" style="font-weight:500">${esc(d?.name || m.drinkId)}</span>
           <span class="t-bs c-v">${esc(d?.category || "주류")} · ${esc(d?.abvLabel || "도수 정보 없음")}</span>
           <span class="t-ll c-p">${m.ml}mL · ${won(m.price)}</span></span>
-        <span class="ring ${sel ? "on" : ""}" aria-hidden="true" style="width:22px;height:22px"><i></i></span>
+        <span class="chk" aria-hidden="true">${icon.check(14)}</span>
       </button>
       <div class="more"><div><div class="more-in">
         ${d ? `<p class="t-bl c-p">“${esc(d.oneLine)}”</p>` : ""}
@@ -1242,14 +1246,21 @@ function bar({ parts, q }) {
       </div></div></div>
     </div>`;
   };
-  const reserved = () => (state.reservations || []).some((r) => r.menuId === barSel[b.id]);
+  const isReserved = (id) => (state.reservations || []).some((r) => r.menuId === id);
+  const picked = () => selOf(b.id).map(menuById).filter(Boolean);
+  const toReserve = () => picked().filter((m) => !isReserved(m.id));
   const footer = () => {
-    const m = barSel[b.id] ? menuById(barSel[b.id]) : null;
-    return `<p class="t-bm c-v" aria-live="polite" style="margin-bottom:8px">${m ? `${esc(m.drink?.name)} · ${m.ml}mL · 예시 ${won(m.price)}` : "메뉴를 골라 주세요"}</p>
-      <div class="btns"><button class="btn btn-s" data-reserve style="flex:1" ${m ? "" : "disabled"} ${m && reserved() ? 'aria-disabled="true"' : ""}>${m && reserved() ? "예약됨 ✓" : "예약하기"}</button>
-      <button class="btn btn-p" data-try style="flex:2" ${m ? "" : "disabled"}>${m ? `${m.ml}mL 맛보기 체험` : "메뉴를 골라 주세요"}</button></div>`;
+    const sel = picked();
+    const total = sel.reduce((t, m) => t + m.price, 0);
+    const summary = !sel.length ? "메뉴를 골라 주세요. 여러 개 골라도 돼요"
+      : sel.length === 1 ? `${esc(sel[0].drink?.name)} · ${sel[0].ml}mL · 예시 ${won(sel[0].price)}`
+      : `${sel.length}개 선택 · 합계 예시 ${won(total)}`;
+    const allDone = sel.length && !toReserve().length;
+    return `<p class="t-bm c-v sel-sum" aria-live="polite" style="margin-bottom:8px">${summary}</p>
+      <div class="btns"><button class="btn btn-s" data-reserve style="flex:1" ${sel.length ? "" : "disabled"} ${allDone ? 'aria-disabled="true"' : ""}>${allDone ? "예약됨 ✓" : sel.length > 1 ? `${toReserve().length}개 예약하기` : "예약하기"}</button>
+      <button class="btn btn-p" data-try style="flex:2" ${sel.length ? "" : "disabled"}>${sel.length ? (sel.length > 1 ? `${sel.length}잔 맛보기 체험` : `${sel[0].ml}mL 맛보기 체험`) : "메뉴를 골라 주세요"}</button></div>`;
   };
-  const focusMenu = focus && barSel[b.id] && menuById(barSel[b.id])?.drinkId === focus.id;
+  const focusMenu = focus && picked().some((m) => m.drinkId === focus.id);
   return {
     html: `<section class="screen">
       ${topbar("바 정보", { backLabel: "주변 바 목록으로 돌아가기" })}
@@ -1266,8 +1277,8 @@ function bar({ parts, q }) {
             <span class="t-bm c-p">“${esc(focus.oneLine)}”</span></div></div>
           ${reasonText(focus) ? `<p class="t-bm">${esc(reasonText(focus))}</p>` : ""}
           <a class="btn-t" href="#/card/${focus.id}" style="align-self:flex-start;padding:0">맛 카드 보기 ${icon.chevronRight(16)}</a></div>` : ""}
-        <div class="stack gap8"><h3 class="t-tm">시음 메뉴 ${ms.length}개</h3><p class="t-bm c-v">맛볼 메뉴를 하나 고르세요.</p>
-          <div class="stack gap8" role="radiogroup" aria-label="시음 메뉴">${ms.map(menuCard).join("")}</div></div>
+        <div class="stack gap8"><h3 class="t-tm">시음 메뉴 ${ms.length}개</h3><p class="t-bm c-v">맛볼 메뉴를 골라 주세요. 여러 개 골라도 돼요.</p>
+          <div class="stack gap8" role="group" aria-label="시음 메뉴">${ms.map(menuCard).join("")}</div></div>
         <div class="stack gap8" style="background:rgba(245,239,241,.6);border-radius:20px;padding:16px">
           <h3 class="t-ts" style="font-weight:500">매장 정보</h3>
           ${infoRow("시간대", `${b.hours} (가상 설정값, 실제 영업 여부 아님)`, true)}${infoRow("주소", UNPROVIDED, true)}${infoRow("소개", UNPROVIDED, true)}
@@ -1280,20 +1291,23 @@ function bar({ parts, q }) {
       bindBack(el);
       const foot = el.querySelector("[data-foot]");
       const bindFoot = () => {
-        foot.querySelector("[data-try]").onclick = () => { if (barSel[b.id]) go(`#/try/${b.id}?m=${barSel[b.id]}`); };
+        // 맛보기 체험은 고른 메뉴 중 첫 번째부터 시작하고, 체험 화면에서 다른 고른 메뉴로 바꿀 수 있다
+        foot.querySelector("[data-try]").onclick = () => { const sel = picked(); if (sel.length) go(`#/try/${b.id}?m=${sel[0].id}`); };
         foot.querySelector("[data-reserve]").onclick = () => {
-          if (barSel[b.id] && !reserved()) reserve(el, b, menuById(barSel[b.id]), () => { foot.innerHTML = footer(); bindFoot(); });
+          const list = toReserve();
+          if (list.length) reserve(el, b, list, () => { foot.innerHTML = footer(); bindFoot(); });
         };
       };
       bindFoot();
       el.querySelectorAll("[data-pick]").forEach((p) => (p.onclick = () => {
-        barSel[b.id] = p.dataset.pick;
+        const id = p.dataset.pick, list = selOf(b.id);
+        const at = list.indexOf(id);
+        if (at >= 0) list.splice(at, 1); else list.push(id);
         buzz(5);
         el.querySelectorAll(".menu").forEach((m) => {
-          const on = m.dataset.menu === barSel[b.id];
+          const on = list.includes(m.dataset.menu);
           m.setAttribute("aria-checked", on);
           m.querySelector(".pick").setAttribute("aria-checked", on);
-          m.querySelector(".ring").classList.toggle("on", on);
         });
         foot.innerHTML = footer();
         bindFoot();
@@ -1308,19 +1322,19 @@ function bar({ parts, q }) {
   };
 }
 // 예약하기: 실제 예약은 없고 '예약 완료!' 알림만 보여 준다 (사용성 평가 과제 3)
-function reserve(screen, b, m, done) {
+function reserve(screen, b, list, done) {
   const pop = document.createElement("div");
   pop.className = "dialog-wrap";
   pop.innerHTML = `<div class="dialog" role="alertdialog" aria-modal="true" aria-labelledby="rsv-t">
     <span class="ok">${icon.check(28)}</span>
     <h2 id="rsv-t" class="t-tl">예약 완료!</h2>
-    <p class="t-bm c-v" style="margin-top:8px">${esc(b.name)} · ${esc(m.drink?.name)} ${m.ml}mL · 예시 ${won(m.price)}<br>오늘 ${esc(b.hours.split("~")[0])} 이후 방문하면 바로 준비해 드려요.</p>
+    <p class="t-bm c-v" style="margin-top:8px">${esc(b.name)}<br>${list.map((m) => `${esc(m.drink?.name)} ${m.ml}mL · 예시 ${won(m.price)}`).join("<br>")}${list.length > 1 ? `<br><b>합계 예시 ${won(list.reduce((t, m) => t + m.price, 0))}</b>` : ""}<br>오늘 ${esc(b.hours.split("~")[0])} 이후 방문하면 바로 준비해 드려요.</p>
     <p class="t-bs c-v" style="margin-top:10px">평가용 화면이라 실제 예약은 되지 않아요</p>
     <button class="btn btn-p" data-ok style="margin-top:16px">확인</button>
   </div>`;
   screen.append(pop);
   buzz(12);
-  state.reservations = [...(state.reservations || []), { barId: b.id, drinkId: m.drinkId, ml: m.ml, menuId: m.id, at: Date.now() }];
+  state.reservations = [...(state.reservations || []), ...list.map((m) => ({ barId: b.id, drinkId: m.drinkId, ml: m.ml, menuId: m.id, at: Date.now() }))];
   save();
   done();
   const ok = pop.querySelector("[data-ok]");
@@ -1416,7 +1430,7 @@ function tasting({ parts, q }) {
         }));
         host.querySelectorAll("[data-m]").forEach((x) => (x.onclick = () => {
           m = menuById(x.dataset.m);
-          barSel[b.id] = m.id;
+          if (!selOf(b.id).includes(m.id)) selOf(b.id).push(m.id);
           history.replaceState(history.state, "", `#/try/${b.id}?m=${m.id}`);
           buzz(5);
           draw(0);
