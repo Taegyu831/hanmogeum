@@ -1,8 +1,8 @@
-import { state, save, reset } from "./store.js?v=11181214";
-import { AXES, Q1, Q2, Q3, prefsFromAnswers, rank, nudge, tasteType, typeBlurb, typeBars, explain } from "./reco.js?v=11181214";
-import { createNav, swallowClick } from "./nav.js?v=11181214";
-import { buzz, burst } from "./fx.js?v=11181214";
-import { C, logoSVG, pourLogo, glyph, drinkArt, drinkPhoto, icon, stepGlass, reduceMotion, FOS, level3, jarIcon, lemonIcon, bubbleGlass, pourGlass, LEVEL_WORD, emptyGlass } from "./brand.js?v=11181214";
+import { state, save, reset } from "./store.js?v=11181216";
+import { AXES, Q1, Q2, Q3, prefsFromAnswers, rank, nudge, tasteType, typeBlurb, typeBars, explain } from "./reco.js?v=11181216";
+import { createNav, swallowClick } from "./nav.js?v=11181216";
+import { buzz, burst } from "./fx.js?v=11181216";
+import { C, logoSVG, pourLogo, glyph, drinkArt, drinkPhoto, icon, stepGlass, reduceMotion, FOS, level3, jarIcon, lemonIcon, bubbleGlass, pourGlass, LEVEL_WORD, emptyGlass } from "./brand.js?v=11181216";
 
 // 화면 모습과 흐름은 안드로이드 앱(design/ui-refresh)과 같게 맞췄다.
 // 웹에서만 정한 것: 예약하기(평가용 완료 알림), 후기, 내 기록, 아래 탭 막대.
@@ -13,7 +13,7 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "
 const won = (n) => n.toLocaleString("ko-KR") + "원";
 
 /* ---------- 데이터 ---------- */
-const load = (f) => fetch(`data/${f}?v=11181214`).then((r) => r.json());
+const load = (f) => fetch(`data/${f}?v=11181216`).then((r) => r.json());
 const [DRINKS, BARS, CHIPS, SAMPLE_REVIEWS] = await Promise.all(
   ["drinks.json", "bars.json", "chips.json", "reviews.json"].map(load));
 const drinkById = Object.fromEntries(DRINKS.map((d) => [d.id, d]));
@@ -839,23 +839,77 @@ function feed() {
       watch();
       new MutationObserver(watch).observe(pager, { childList: true });
 
-      // 첫 잔에서 한 번만: 카드를 살짝 왼쪽으로 밀었다 돌려놓아 '밀면 뭔가 있다'를 보여 준다.
-      if (!state.hintSeen && !reduceMotion()) {
-        const reel = pager.querySelector('.page[data-i="0"] .reel');
+      // 처음 한 번만, 두 단계로 알려 준다.
+      // 1단계: 릴스처럼 위로 넘기는 피드라는 것. 안내 상자를 띄우고 다음 잔을 살짝 올렸다 내려 보여 준다.
+      //        사용자가 실제로 한 번 넘길 때까지 상자가 남아 있다.
+      // 2단계: 한 번 넘긴 뒤, 그 잔을 왼쪽으로 살짝 밀었다 돌려놓아 맛 카드가 있다는 걸 보여 준다.
+      const leftPeek = () => {
+        if (state.hintSeen || reduceMotion()) { state.hintSeen = true; save(); return; }
+        const reel = pager.querySelector(`.page[data-i="${state.feedIndex}"] .reel`);
+        if (!reel?.isConnected) return;
+        reel.classList.add("moving");
+        reel.style.transition = "transform 380ms cubic-bezier(.4,0,.2,1)";
+        reel.style.transform = "translateX(-72px)";
         setTimeout(() => {
-          if (!reel?.isConnected || state.hintSeen) return;
-          reel.classList.add("moving");
-          reel.style.transition = "transform 380ms cubic-bezier(.4,0,.2,1)";
-          reel.style.transform = "translateX(-72px)";
-          setTimeout(() => {
-            reel.style.transition = "transform 700ms cubic-bezier(.3,1.5,.5,1)";
-            reel.style.transform = "";
-            setTimeout(() => reel.classList.remove("moving"), 720);
-            state.hintSeen = true;
-            save();
-          }, 640);
-        }, 900);
-      }
+          reel.style.transition = "transform 700ms cubic-bezier(.3,1.5,.5,1)";
+          reel.style.transform = "";
+          setTimeout(() => reel.classList.remove("moving"), 720);
+          state.hintSeen = true;
+          save();
+        }, 640);
+      };
+      if (!state.swipeSeen) {
+        const coach = document.createElement("div");
+        coach.className = "coach";
+        coach.setAttribute("role", "status");
+        coach.innerHTML = `<span class="coach-hand" aria-hidden="true">${icon.hand(30)}</span>
+          <b>위로 넘겨서 다음 잔 보기</b><span>릴스처럼 한 잔씩 넘겨 봐요</span>`;
+        pager.parentElement.append(coach);
+        const base = () => pageTop(state.feedIndex);
+        let peeking = false, stop = false, tries = 0, user = false;
+        pager.addEventListener("pointerdown", () => (user = true), { passive: true });
+        pager.addEventListener("touchstart", () => (user = true), { passive: true });
+        // 다음 잔을 140px 올렸다가 제자리로 (사용자가 손대면 바로 멈춘다)
+        const peek = () => new Promise((done) => {
+          if (reduceMotion() || user || stop) return done();
+          peeking = true;
+          const y0 = base(), D = 1400, t0 = performance.now();
+          pager.style.scrollSnapType = "none";
+          const step = (now) => {
+            const p = Math.min(1, (now - t0) / D);
+            if (user || stop || !pager.isConnected) { peeking = false; pager.style.scrollSnapType = ""; return done(); }
+            pager.scrollTop = y0 + 140 * Math.sin(Math.PI * p) ** 2;
+            if (p < 1) return requestAnimationFrame(step);
+            pager.scrollTop = y0;
+            pager.style.scrollSnapType = "";
+            peeking = false;
+            done();
+          };
+          requestAnimationFrame(step);
+        });
+        const start = state.feedIndex;
+        const finish = () => {
+          if (stop) return;
+          stop = true;
+          coach.classList.remove("on");
+          setTimeout(() => coach.remove(), 350);
+          state.swipeSeen = true;
+          save();
+          setTimeout(leftPeek, 700);
+        };
+        // 실제로 다른 잔으로 넘어가면 1단계 끝
+        pager.addEventListener("scroll", () => {
+          if (peeking || stop) return;
+          if (Math.abs(pager.scrollTop - pageTop(start)) > pager.clientHeight * 0.5) finish();
+        }, { passive: true });
+        const loop = async () => {
+          if (stop || !pager.isConnected || tries >= 3) return;
+          tries++;
+          await peek();
+          setTimeout(loop, 2600);
+        };
+        setTimeout(() => { if (pager.isConnected) { coach.classList.add("on"); setTimeout(loop, 500); } }, 500);
+      } else if (!state.hintSeen) setTimeout(leftPeek, 900);
     },
   };
 }

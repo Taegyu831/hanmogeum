@@ -522,3 +522,16 @@ strong.kw { font-weight: 700; color: var(--on-surface); }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
+
+/* 탐색 첫 진입 안내: 위로 넘기는 피드라는 걸 먼저 보여 준다 */
+.coach { position: absolute; left: 50%; top: 30%; translate: -50% 0; z-index: 40; pointer-events: none;
+  display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 18px 22px 16px; border-radius: 20px;
+  background: rgba(43, 36, 48, .82); color: #fff; text-align: center; white-space: nowrap;
+  opacity: 0; scale: .94; transition: opacity .3s, scale .3s var(--ease); }
+.coach.on { opacity: 1; scale: 1; }
+.coach b { font-size: 16px; line-height: 22px; margin-top: 6px; }
+.coach span:last-child { font-size: 13px; line-height: 18px; opacity: .8; }
+.coach-hand { display: grid; height: 56px; align-items: end; color: #2B2430; }
+.coach.on .coach-hand { animation: coachUp 1.6s var(--ease) infinite; }
+@keyframes coachUp { 0% { transform: translateY(14px); opacity: 0; } 20% { opacity: 1; } 70% { transform: translateY(-18px); opacity: 1; } 100% { transform: translateY(-22px); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .coach.on .coach-hand { animation: none; } }
