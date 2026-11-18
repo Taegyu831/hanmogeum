@@ -1,8 +1,8 @@
-import { state, save, reset } from "./store.js?v=11181305";
-import { AXES, Q1, Q2, Q3, prefsFromAnswers, rank, scoreDrink, nudge, tasteType, typeBlurb, typeBars, explain } from "./reco.js?v=11181305";
-import { createNav, swallowClick } from "./nav.js?v=11181305";
-import { buzz, burst } from "./fx.js?v=11181305";
-import { C, logoSVG, pourLogo, glyph, drinkArt, drinkPhoto, icon, stepGlass, reduceMotion, FOS, level3, jarIcon, lemonIcon, bubbleGlass, pourGlass, LEVEL_WORD, emptyGlass } from "./brand.js?v=11181305";
+import { state, save, reset } from "./store.js?v=11181308";
+import { AXES, Q1, Q2, Q3, prefsFromAnswers, rank, scoreDrink, nudge, tasteType, typeBlurb, typeBars, explain } from "./reco.js?v=11181308";
+import { createNav, swallowClick } from "./nav.js?v=11181308";
+import { buzz, burst } from "./fx.js?v=11181308";
+import { C, logoSVG, pourLogo, glyph, drinkArt, drinkPhoto, icon, stepGlass, reduceMotion, FOS, level3, jarIcon, lemonIcon, bubbleGlass, pourGlass, LEVEL_WORD, emptyGlass } from "./brand.js?v=11181308";
 
 // 화면 모습과 흐름은 안드로이드 앱(design/ui-refresh)과 같게 맞췄다.
 // 웹에서만 정한 것: 예약하기(평가용 완료 알림), 후기, 내 기록, 아래 탭 막대.
@@ -13,7 +13,7 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "
 const won = (n) => n.toLocaleString("ko-KR") + "원";
 
 /* ---------- 데이터 ---------- */
-const load = (f) => fetch(`data/${f}?v=11181305`).then((r) => r.json());
+const load = (f) => fetch(`data/${f}?v=11181308`).then((r) => r.json());
 const [DRINKS, BARS, CHIPS, SAMPLE_REVIEWS] = await Promise.all(
   ["drinks.json", "bars.json", "chips.json", "reviews.json"].map(load));
 const drinkById = Object.fromEntries(DRINKS.map((d) => [d.id, d]));
@@ -792,7 +792,7 @@ function openPreview(screen, d, onClose) {
     <div class="pv-top"><span class="cat">${esc(d.category)}</span><span class="grow"></span>${r ? rankTag(r, `추천 ${r}위`) : ""}
       <button class="pv-x" data-x aria-label="미리보기 닫기">${icon.cross(16)}</button></div>
     <div class="pv-body">
-      <div class="pv-visual"><span class="glow" aria-hidden="true"></span>${drinkPhoto(d, 124, 178)}</div>
+      <div class="pv-visual">${drinkPhoto(d, 124, 178)}</div>
       <h2 class="name" id="pv-t">${esc(d.name)}</h2>
       <p class="meta">${esc(d.category)} · ${esc(d.abvLabel)}</p>
       <p class="one">“${esc(d.oneLine)}”</p>
