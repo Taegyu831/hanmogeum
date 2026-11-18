@@ -203,6 +203,7 @@ strong.kw { font-weight: 700; color: var(--on-surface); }
 .sel[aria-checked="true"] .glyph svg, .sel[aria-checked="true"] .glyph svg [stroke]:not([stroke="none"]) { stroke: #fff; }
 .sel[aria-checked="true"] .glyph svg [fill]:not([fill="none"]) { fill: #fff; }
 .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.tile .like { font-weight: 500; margin-top: auto; padding-top: 2px; }
 .tile { border-radius: var(--r-l); min-height: 128px; padding: 18px 16px 16px; display: flex; flex-direction: column; gap: 6px; }
 .glyph { display: grid; margin-bottom: 6px; }
 

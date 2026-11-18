@@ -1,8 +1,8 @@
-import { state, save, reset } from "./store.js?v=11181206";
-import { AXES, Q1, Q2, Q3, prefsFromAnswers, rank, nudge, tasteType, typeBlurb, typeBars, explain } from "./reco.js?v=11181206";
-import { createNav, swallowClick } from "./nav.js?v=11181206";
-import { buzz, burst } from "./fx.js?v=11181206";
-import { C, logoSVG, pourLogo, glyph, drinkArt, drinkPhoto, icon, stepGlass, reduceMotion, FOS, level3, jarIcon, lemonIcon, bubbleGlass, pourGlass, LEVEL_WORD, emptyGlass } from "./brand.js?v=11181206";
+import { state, save, reset } from "./store.js?v=11181214";
+import { AXES, Q1, Q2, Q3, prefsFromAnswers, rank, nudge, tasteType, typeBlurb, typeBars, explain } from "./reco.js?v=11181214";
+import { createNav, swallowClick } from "./nav.js?v=11181214";
+import { buzz, burst } from "./fx.js?v=11181214";
+import { C, logoSVG, pourLogo, glyph, drinkArt, drinkPhoto, icon, stepGlass, reduceMotion, FOS, level3, jarIcon, lemonIcon, bubbleGlass, pourGlass, LEVEL_WORD, emptyGlass } from "./brand.js?v=11181214";
 
 // 화면 모습과 흐름은 안드로이드 앱(design/ui-refresh)과 같게 맞췄다.
 // 웹에서만 정한 것: 예약하기(평가용 완료 알림), 후기, 내 기록, 아래 탭 막대.
@@ -13,7 +13,7 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "
 const won = (n) => n.toLocaleString("ko-KR") + "원";
 
 /* ---------- 데이터 ---------- */
-const load = (f) => fetch(`data/${f}?v=11181206`).then((r) => r.json());
+const load = (f) => fetch(`data/${f}?v=11181214`).then((r) => r.json());
 const [DRINKS, BARS, CHIPS, SAMPLE_REVIEWS] = await Promise.all(
   ["drinks.json", "bars.json", "chips.json", "reviews.json"].map(load));
 const drinkById = Object.fromEntries(DRINKS.map((d) => [d.id, d]));
@@ -28,7 +28,7 @@ const Q2_EFFECT = {
   hangover: "도수가 높은 술(15% 초과)의 우선순위를 낮춰요",
   drunk: "가볍게 마시기 좋은 저도수 주류를 우선 추천해요",
   noisy: "차분히 맛과 향을 음미하기 좋은 주류를 탐색해요",
-  none: "감점 조건 없이 좋아하는 음료 취향 중심으로 추천해요",
+  none: "감점 조건 없이 고른 음료 맛 중심으로 추천해요",
 };
 const Q3_SUB = {
   taste: "근처 바에서 10~30mL씩 가볍게 (가상 시음 시나리오)",
@@ -328,7 +328,7 @@ function question({ parts }) {
   const n = Math.min(3, Math.max(1, Number(parts[1]) || 1));
   const a = state.answers;
   const cfg = {
-    1: { title: "평소 좋아하는\n음료는 뭐예요?", helper: "여러 개 골라도 좋아요.", skip: "건너뛰기" },
+    1: { title: "술에서도 이런 맛이면\n좋겠어요?", helper: "좋아하는 음료 맛을 닮은 술을 찾아 드려요. 여러 개 골라도 좋아요.", skip: "건너뛰기" },
     2: { title: "소주나 맥주,\n어떤 점이 아쉬웠나요?", helper: "고른 만큼 추천에 반영돼요. 없으면 그냥 넘어가도 괜찮아요.", skip: "건너뛰기" },
     3: { title: "새로운 술,\n어떻게 만나고 싶어요?", helper: "한 병을 다 사기 전에, 10~30mL로 먼저 맛보는 방법도 있어요.", skip: "결과 바로 보기" },
   }[n];
@@ -336,6 +336,7 @@ function question({ parts }) {
   if (n === 1) {
     opts = `<div class="tiles" role="group" aria-label="좋아하는 음료">${Q1.map((o) => `<button class="sel tile press" role="checkbox" aria-checked="${a.q1.includes(o.id)}" data-id="${o.id}">
       <span class="glyph">${glyph(o.id, 32)}</span><span class="t-tm">${o.label}</span><span class="t-bm c-v">${o.sub}</span>
+      <span class="t-bs c-p like">→ ${o.like}</span>
       <span class="badge" aria-hidden="true">${icon.check(14)}</span></button>`).join("")}</div>`;
   } else if (n === 2) {
     opts = `<div class="reasons" role="group" aria-label="아쉬웠던 점">${Q2.map((o) => `<button class="sel reason press" role="checkbox" aria-checked="${a.q2.includes(o.id)}" data-id="${o.id}">

@@ -11,12 +11,12 @@ export const AXIS_LABEL = {
 
 // Q1: familiar drinks. Each adds to the preference vector.
 export const Q1 = [
-  { id: "americano", label: "아메리카노", sub: "쌉싸름하고 고소해요", color: "var(--c-wood)", add: { bitter: 2, grain: 1, wood: 2, body: 1 } },
-  { id: "peachtea", label: "복숭아 아이스티", sub: "달콤하고 향긋해요", color: "var(--c-fruit)", add: { sweet: 2, fruit: 2, flower: 1 } },
-  { id: "soda", label: "탄산음료", sub: "톡톡 시원해요", color: "var(--c-citrus)", add: { fizz: 3, sweet: 1 } },
-  { id: "latte", label: "우유·라떼", sub: "부드럽고 고소해요", color: "var(--c-grain)", add: { sweet: 1, body: 2, grain: 2 } },
-  { id: "juice", label: "과일주스", sub: "새콤달콤해요", color: "var(--c-berry)", add: { sour: 1, fruit: 3, sweet: 1 } },
-  { id: "herbtea", label: "허브티", sub: "은은한 풀 향이에요", color: "var(--c-herb)", add: { herb: 3, flower: 1 } },
+  { id: "americano", like: "위스키 · 말벡 와인", label: "아메리카노", sub: "쌉싸름하고 고소해요", color: "var(--c-wood)", add: { bitter: 2, grain: 1, wood: 2, body: 1 } },
+  { id: "peachtea", like: "모스카토 다스티", label: "복숭아 아이스티", sub: "달콤하고 향긋해요", color: "var(--c-fruit)", add: { sweet: 2, fruit: 2, flower: 1 } },
+  { id: "soda", like: "프로세코 · 하이볼", label: "탄산음료", sub: "톡톡 시원해요", color: "var(--c-citrus)", add: { fizz: 3, sweet: 1 } },
+  { id: "latte", like: "막걸리 · 소곡주", label: "우유·라떼", sub: "부드럽고 고소해요", color: "var(--c-grain)", add: { sweet: 1, body: 2, grain: 2 } },
+  { id: "juice", like: "매실주 · 복분자주", label: "과일주스", sub: "새콤달콤해요", color: "var(--c-berry)", add: { sour: 1, fruit: 3, sweet: 1 } },
+  { id: "herbtea", like: "소비뇽 블랑 · 진", label: "허브티", sub: "은은한 풀 향이에요", color: "var(--c-herb)", add: { herb: 3, flower: 1 } },
 ];
 
 // Q2: what was off about soju and beer. Penalties.
@@ -145,7 +145,7 @@ export function explain(d, answers) {
     for (const [a, v] of Object.entries(q.add)) s += v * t[a];
     if (s > bestS) { best = q; bestS = s; }
   }
-  if (best && bestS >= 10) why.push(`${best.label}를 좋아한다고 하셨어요.`);
+  if (best && bestS >= 10) why.push(`술에서도 ${best.label} 같은 맛을 원하셨어요.`);
   if (q2.includes("bitter") && t.bitter <= 2) why.push("쓴맛이 거의 없어서 부담이 적어요.");
   if (q2.includes("alcsmell") && t.alc <= 2) why.push("알코올 향이 도드라지지 않아요.");
   if (d.abv <= 8) why.push("도수가 낮아서 가볍게 시작하기 좋아요.");
