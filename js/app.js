@@ -1,8 +1,8 @@
-import { state, save, reset } from "./store.js?v=11181216";
-import { AXES, Q1, Q2, Q3, prefsFromAnswers, rank, nudge, tasteType, typeBlurb, typeBars, explain } from "./reco.js?v=11181216";
-import { createNav, swallowClick } from "./nav.js?v=11181216";
-import { buzz, burst } from "./fx.js?v=11181216";
-import { C, logoSVG, pourLogo, glyph, drinkArt, drinkPhoto, icon, stepGlass, reduceMotion, FOS, level3, jarIcon, lemonIcon, bubbleGlass, pourGlass, LEVEL_WORD, emptyGlass } from "./brand.js?v=11181216";
+import { state, save, reset } from "./store.js?v=11181253";
+import { AXES, Q1, Q2, Q3, prefsFromAnswers, rank, scoreDrink, nudge, tasteType, typeBlurb, typeBars, explain } from "./reco.js?v=11181253";
+import { createNav, swallowClick } from "./nav.js?v=11181253";
+import { buzz, burst } from "./fx.js?v=11181253";
+import { C, logoSVG, pourLogo, glyph, drinkArt, drinkPhoto, icon, stepGlass, reduceMotion, FOS, level3, jarIcon, lemonIcon, bubbleGlass, pourGlass, LEVEL_WORD, emptyGlass } from "./brand.js?v=11181253";
 
 // 화면 모습과 흐름은 안드로이드 앱(design/ui-refresh)과 같게 맞췄다.
 // 웹에서만 정한 것: 예약하기(평가용 완료 알림), 후기, 내 기록, 아래 탭 막대.
@@ -13,7 +13,7 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "
 const won = (n) => n.toLocaleString("ko-KR") + "원";
 
 /* ---------- 데이터 ---------- */
-const load = (f) => fetch(`data/${f}?v=11181216`).then((r) => r.json());
+const load = (f) => fetch(`data/${f}?v=11181253`).then((r) => r.json());
 const [DRINKS, BARS, CHIPS, SAMPLE_REVIEWS] = await Promise.all(
   ["drinks.json", "bars.json", "chips.json", "reviews.json"].map(load));
 const drinkById = Object.fromEntries(DRINKS.map((d) => [d.id, d]));
@@ -28,7 +28,7 @@ const Q2_EFFECT = {
   hangover: "도수가 높은 술(15% 초과)의 우선순위를 낮춰요",
   drunk: "가볍게 마시기 좋은 저도수 주류를 우선 추천해요",
   noisy: "차분히 맛과 향을 음미하기 좋은 주류를 탐색해요",
-  none: "감점 조건 없이 고른 음료 맛 중심으로 추천해요",
+  none: "감점 조건 없이 좋아하는 음료 취향 중심으로 추천해요",
 };
 const Q3_SUB = {
   taste: "근처 바에서 10~30mL씩 가볍게 (가상 시음 시나리오)",
@@ -170,7 +170,9 @@ function parse(hash = location.hash) {
   const [path, qs] = h.split("?");
   return { path, parts: path.split("/").filter(Boolean), q: new URLSearchParams(qs || "") };
 }
-const TAB_ROOTS = ["feed", "nearby", "log"];
+const TAB_ROOTS = ["feed", "reels", "nearby", "log"];
+// 탐색은 그리드(#/feed)가 기본이고, 릴스(#/reels)로 바꿔 볼 수 있다. 마지막에 본 쪽으로 돌아간다.
+const feedHash = () => (state.feedView === "reels" ? "#/reels" : "#/feed");
 const isTabRoot = (path) => {
   const p = path.split("/").filter(Boolean);
   return p.length === 1 && TAB_ROOTS.includes(p[0]);
@@ -178,7 +180,7 @@ const isTabRoot = (path) => {
 function parentOf(hash) {
   const { parts, q } = parse(hash);
   switch (parts[0]) {
-    case "card": return "#/feed";
+    case "card": return feedHash();
     case "nearby": return parts[1] ? "#/nearby" : null;
     case "bar": return q.get("drink") ? `#/nearby/${q.get("drink")}` : "#/nearby";
     case "try": return `#/bar/${parts[1]}`;
@@ -199,7 +201,7 @@ function backFilter(e) {
 function build(hash) {
   const r = parse(hash);
   const key = r.parts[0] || "";
-  if (key === "feed" && feedKeep?.el.isConnected) { feedKeep.show(); return feedKeep.el; }
+  if (key === "reels" && feedKeep?.el.isConnected) { feedKeep.show(); return feedKeep.el; }
   const fn = ROUTES[key] || start;
   const view = fn(r);
   if (!view) return null;
@@ -208,7 +210,7 @@ function build(hash) {
   const el = tpl.content.firstElementChild;
   app.append(el);
   view.mount?.(el);
-  if (key === "feed") feedKeep = { el, show: () => view.show?.(el) };
+  if (key === "reels") feedKeep = { el, show: () => view.show?.(el) };
   if (key && !isTabRoot(r.path)) nav.drag(el, { dir: "back", target: () => nav.prevHash(), filter: backFilter });
   return el;
 }
@@ -216,6 +218,11 @@ const nav = createNav({ root: app, build, parentOf, isTabRoot, keep: (el) => el 
 const go = (hash, opts) => nav.go(hash, opts);
 const back = (fallback) => nav.back(fallback);
 const render = () => nav.refresh();
+
+document.addEventListener("click", (e) => {
+  const v = e.target.closest?.("[data-view]");
+  if (v) { state.feedView = v.dataset.view; save(); }
+});
 
 /* ---------- 공통 조각 ---------- */
 const toastEl = document.createElement("div");
@@ -234,7 +241,7 @@ function tabbar(active) {
   const tab = (id, href, ico, label) =>
     `<a href="${href}" class="${active === id ? "on" : ""}" ${active === id ? 'aria-current="page"' : ""}><span class="ico">${ico}</span>${label}</a>`;
   return `<nav class="tabbar" aria-label="메뉴">
-    ${tab("feed", "#/feed", icon.compass, "탐색")}
+    ${tab("feed", feedHash(), icon.compass, "탐색")}
     ${tab("nearby", "#/nearby", icon.pinLine, "근처 한 잔")}
     ${tab("log", "#/log", icon.book, "내 기록")}
   </nav>`;
@@ -328,7 +335,7 @@ function question({ parts }) {
   const n = Math.min(3, Math.max(1, Number(parts[1]) || 1));
   const a = state.answers;
   const cfg = {
-    1: { title: "술에서도 이런 맛이면\n좋겠어요?", helper: "좋아하는 음료 맛을 닮은 술을 찾아 드려요. 여러 개 골라도 좋아요.", skip: "건너뛰기" },
+    1: { title: "평소 좋아하는\n음료는 뭐예요?", helper: "여러 개 골라도 좋아요.", skip: "건너뛰기" },
     2: { title: "소주나 맥주,\n어떤 점이 아쉬웠나요?", helper: "고른 만큼 추천에 반영돼요. 없으면 그냥 넘어가도 괜찮아요.", skip: "건너뛰기" },
     3: { title: "새로운 술,\n어떻게 만나고 싶어요?", helper: "한 병을 다 사기 전에, 10~30mL로 먼저 맛보는 방법도 있어요.", skip: "결과 바로 보기" },
   }[n];
@@ -336,7 +343,6 @@ function question({ parts }) {
   if (n === 1) {
     opts = `<div class="tiles" role="group" aria-label="좋아하는 음료">${Q1.map((o) => `<button class="sel tile press" role="checkbox" aria-checked="${a.q1.includes(o.id)}" data-id="${o.id}">
       <span class="glyph">${glyph(o.id, 32)}</span><span class="t-tm">${o.label}</span><span class="t-bm c-v">${o.sub}</span>
-      <span class="t-bs c-p like">→ ${o.like}</span>
       <span class="badge" aria-hidden="true">${icon.check(14)}</span></button>`).join("")}</div>`;
   } else if (n === 2) {
     opts = `<div class="reasons" role="group" aria-label="아쉬웠던 점">${Q2.map((o) => `<button class="sel reason press" role="checkbox" aria-checked="${a.q2.includes(o.id)}" data-id="${o.id}">
@@ -617,6 +623,8 @@ function result() {
     el.querySelector("[data-go-feed]").addEventListener("click", () => {
       state.order = feedOrder();
       state.feedIndex = 0;
+      state.mine = true;
+      state.cat = null;
       save();
       dropFeed();
     });
@@ -642,7 +650,154 @@ function result() {
   };
 }
 
-/* ---------- B. 피드 (릴스) ---------- */
+/* ---------- B-1. 탐색 그리드 (기본) ---------- */
+// 3열 그리드 + 맨 위 거르기 줄. '내 취향'은 질문 답으로 만든 종합 필터로, 언제든 켜고 끌 수 있다.
+const MAIN_CATS = ["와인", "전통주", "위스키", "맥주"];
+const catKey = (d) => (MAIN_CATS.includes(d.category) ? d.category : "기타");
+const CAT_ORDER = [...MAIN_CATS, "기타"];
+// 내 취향: 추천 1~5위 + 지금 취향 점수가 꽤 높은 술 (모두 합쳐 8~12잔). 끌려요·패스에 따라 바뀐다.
+function mineIds() {
+  const order = feedOrder();
+  const sc = Object.fromEntries(DRINKS.map((d) => [d.id, scoreDrink(d, state.prefs, state.answers.q2, state.answers.q3)]));
+  const max = Math.max(...Object.values(sc));
+  const head = order.slice(0, TOP_N);
+  let rest = order.slice(TOP_N).filter((id) => max > 0 && sc[id] >= max * 0.55);
+  if (head.length + rest.length < 8) rest = order.slice(TOP_N, 8);
+  const ids = [...head, ...rest].slice(0, 12);
+  return [...ids.filter((id) => !state.passed.includes(id)), ...ids.filter((id) => state.passed.includes(id))];
+}
+// 내 취향을 끄면 점수와 상관없이 주종별 기본 순서
+const allIds = () => CAT_ORDER.flatMap((c) => DRINKS.filter((d) => catKey(d) === c).map((d) => d.id));
+const shortName = (n) => n.replace(/\s*\([^)]*\)\s*$/, "");
+function miniTaste(d) {
+  const sw = level3(d.taste.sweet), so = level3(d.taste.sour), fz = level3(d.taste.fizz);
+  const cell = (lv, ic, lb) => `<span class="mt"><span class="mi">${ic}</span><span class="md">${[0, 1, 2].map((k) => `<i class="${k < lv ? "on" : ""}"></i>`).join("")}</span><span class="ml">${lb}</span></span>`;
+  return `<span class="mts" aria-hidden="true">${cell(sw, jarIcon(sw > 0, 14), "단맛")}${cell(so, lemonIcon(so > 0, 14), "신맛")}${cell(fz, bubbleGlass(fz, 15), "탄산")}</span>`;
+}
+function tileHTML(d) {
+  const r = recRankOf(d.id), liked = state.liked.includes(d.id), passed = state.passed.includes(d.id);
+  const sw = level3(d.taste.sweet), so = level3(d.taste.sour), fz = level3(d.taste.fizz);
+  return `<button class="tile-d press" data-d="${d.id}" ${passed ? "data-passed" : ""} style="--tint:${TINT[d.category] || C.surfaceVariant}"
+    aria-label="${esc(d.name)}${r ? `, 추천 ${r}위` : ""}${liked ? ", 끌린 술" : ""}${passed ? ", 패스한 술" : ""}. 단맛 ${LEVEL_WORD[sw]}, 신맛 ${LEVEL_WORD[so]}, 탄산 ${LEVEL_WORD[fz]}. 미리보기 열기">
+    <span class="ph">${drinkPhoto(d, 60, 88, true)}${r ? `<span class="rk">${medal(r, 12)}${r}위</span>` : ""}${liked ? `<span class="lk">${icon.heart(true, 13)}</span>` : ""}</span>
+    <span class="nm">${esc(shortName(d.name))}</span>
+    ${miniTaste(d)}
+  </button>`;
+}
+let gridScroll = 0;
+function feed() {
+  ensureRecs();
+  state.feedView = "grid";
+  save();
+  const chips = () => `<button class="fchip mine" data-mine aria-pressed="${state.mine}">${state.mine ? icon.check(14) : ""}내 취향</button><span class="fsep" aria-hidden="true"></span>
+    ${["전체", ...CAT_ORDER].map((c) => `<button class="fchip" data-cat="${c}" aria-pressed="${(state.cat || "전체") === c}">${c}</button>`).join("")}`;
+  return {
+    html: `<section class="screen grid-screen">${feedHead("grid")}
+      <div class="fchips" role="toolbar" aria-label="술 거르기" data-noswipe>${chips()}</div>
+      <div class="scroll" data-gs><p class="g-note" aria-live="polite"></p><div class="dgrid"></div></div>
+      ${tabbar("feed")}</section>`,
+    mount(el) {
+      const sc = el.querySelector("[data-gs]");
+      const draw = () => {
+        el.querySelector(".fchips").innerHTML = chips();
+        let ids = state.mine ? mineIds() : allIds();
+        if (state.cat) ids = ids.filter((id) => catKey(drinkById[id]) === state.cat);
+        const what = state.cat ? `${state.cat} ` : "";
+        el.querySelector(".g-note").innerHTML = state.mine
+          ? `질문 답으로 고른 ${what}<b>${ids.length}잔</b>이에요. 끌려요·패스할수록 바뀌고, <b>내 취향</b>을 끄면 전체를 볼 수 있어요.`
+          : `전체 ${what}<b>${ids.length}잔</b>이에요. <b>내 취향</b>을 켜면 질문 답에 맞는 술만 보여요.`;
+        el.querySelector(".dgrid").innerHTML = ids.length ? ids.map((id) => tileHTML(drinkById[id])).join("")
+          : `<div class="g-empty"><p class="t-bm c-v">내 취향에 맞는 ${esc(state.cat || "술")}${iGa(state.cat || "술")} 아직 없어요.</p><button class="btn btn-s" data-allcat>내 취향 끄고 전체 ${esc(state.cat || "")} 보기</button></div>`;
+        el.querySelector("[data-allcat]")?.addEventListener("click", () => { state.mine = false; save(); draw(); });
+      };
+      const head = () => {
+        el.querySelector(".feed-head").outerHTML = feedHead("grid");
+        el.querySelector(".feed-head [data-liked]").onclick = () => openLiked(el);
+      };
+      head();
+      draw();
+      requestAnimationFrame(() => (sc.scrollTop = gridScroll));
+      sc.addEventListener("scroll", () => (gridScroll = sc.scrollTop), { passive: true });
+      el.querySelector(".fchips").addEventListener("click", (e) => {
+        const b = e.target.closest("button");
+        if (!b) return;
+        if (b.dataset.mine !== undefined) { state.mine = !state.mine; toast(state.mine ? "내 취향에 맞는 술만 보여요" : "전체 술을 보여요"); }
+        else state.cat = b.dataset.cat === "전체" ? null : b.dataset.cat;
+        save();
+        buzz(5);
+        draw();
+        sc.scrollTop = 0;
+      });
+      el.querySelector(".dgrid").addEventListener("click", (e) => {
+        const t = e.target.closest("[data-d]");
+        if (t) openPreview(el, drinkById[t.dataset.d], () => { head(); draw(); });
+      });
+    },
+  };
+}
+// 그리드 칸을 누르면 뜨는 미리보기: 릴스 한 장에 보이던 정보를 모두 담고, 맨 아래에서 맛 카드로 간다
+function openPreview(screen, d, onClose) {
+  const r = recRankOf(d.id), n = barsFor(d.id).length;
+  const w = document.createElement("div");
+  w.className = "pv-wrap";
+  w.innerHTML = `<div class="pv" role="dialog" aria-modal="true" aria-labelledby="pv-t" style="--tint:${TINT[d.category] || C.surfaceVariant}">
+    <div class="pv-top"><span class="cat">${esc(d.category)}</span><span class="grow"></span>${r ? rankTag(r, `추천 ${r}위`) : ""}
+      <button class="pv-x" data-x aria-label="미리보기 닫기">${icon.cross(16)}</button></div>
+    <div class="pv-body">
+      <div class="pv-visual"><span class="glow" aria-hidden="true"></span>${drinkPhoto(d, 124, 178)}</div>
+      <h2 class="name" id="pv-t">${esc(d.name)}</h2>
+      <p class="meta">${esc(d.category)} · ${esc(d.abvLabel)}</p>
+      <p class="one">“${esc(d.oneLine)}”</p>
+      ${tasteIcons(d, 0.9)}
+      ${n ? `<a class="try-pill" href="#/nearby/${d.id}" aria-label="${esc(d.name)}, ${priceTag(d.id)}, 근처 ${n}곳에서 맛보기. 바 보기">${icon.pin(16)}<b>${priceTag(d.id)}</b><span>· 근처 ${n}곳</span>${icon.chevronRight(14, 14)}</a>` : ""}
+      <div class="pv-acts">
+        <button class="pv-btn pass" data-pass></button>
+        <button class="pv-btn like" data-like></button>
+      </div>
+    </div>
+    <a class="btn btn-p pv-go" href="#/card/${d.id}">맛 카드 보기 ${icon.chevronRight(16)}</a>
+  </div>`;
+  const like = w.querySelector("[data-like]"), pass = w.querySelector("[data-pass]");
+  const paint = () => {
+    const L = state.liked.includes(d.id), P = state.passed.includes(d.id);
+    like.setAttribute("aria-pressed", L);
+    like.innerHTML = `${icon.heart(L, 18)}<span>끌려요</span>`;
+    pass.setAttribute("aria-pressed", P);
+    pass.innerHTML = `${icon.cross(14)}<span>패스</span>`;
+  };
+  paint();
+  let changed = false;
+  const close = () => {
+    document.removeEventListener("keydown", onKey);
+    w.classList.remove("on");
+    setTimeout(() => w.remove(), 200);
+    if (changed) onClose?.();
+  };
+  const onKey = (e) => { if (e.key === "Escape") close(); };
+  document.addEventListener("keydown", onKey);
+  w.addEventListener("click", (e) => { if (e.target === w || e.target.closest("[data-x], a")) close(); });
+  like.onclick = () => {
+    const on = !state.liked.includes(d.id);
+    setFeedback(d.id, on ? true : null);
+    changed = true; feedDirty = true;
+    paint();
+    if (on) { buzz(12); burst(like.querySelector("svg"), app, HEART_SPARKS); toast("끌린 맛을 다음 추천에 반영할게요"); }
+    else toast("끌려요를 취소했어요");
+  };
+  pass.onclick = () => {
+    const on = !state.passed.includes(d.id);
+    setFeedback(d.id, on ? false : null);
+    changed = true; feedDirty = true;
+    paint();
+    if (on) { buzz(8); toast("비슷한 맛은 뒤로 미룰게요"); setTimeout(close, 380); }
+    else toast("패스를 취소했어요");
+  };
+  screen.append(w);
+  requestAnimationFrame(() => w.classList.add("on"));
+  w.querySelector("[data-x]").focus({ preventScroll: true });
+}
+
+/* ---------- B-2. 피드 (릴스) ---------- */
 function reelHTML(d, i, total) {
   const fbState = state.liked.includes(d.id) ? "like" : state.passed.includes(d.id) ? "pass" : null;
   const n = barsFor(d.id).length;
@@ -680,23 +835,31 @@ function endHTML() {
     <a class="btn-t v" href="#/q/1">취향 다시 고르기</a>
   </div></div>`;
 }
-function feedHead() {
+const VIEW_IC = {
+  grid: `<svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true" fill="currentColor">${[2, 8, 14].flatMap((y) => [2, 8, 14].map((x) => `<rect x="${x}" y="${y}" width="4.6" height="4.6" rx="1.2"/>`)).join("")}</svg>`,
+  reels: `<svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="4.5" y="2" width="11" height="16" rx="2.5"/><path d="M8.6 7.6v4.8l4-2.4z" fill="currentColor"/></svg>`,
+};
+function feedHead(view = "reels") {
   const top3 = typeBars(state.prefs, 3).map((b) => b.label).join("·");
+  const other = view === "grid" ? "reels" : "grid";
   return `<header class="feed-head">
     ${logoSVG(30)}
     <div class="who"><h1 class="t-tm">나를 위한 한모금</h1><p class="t-bs c-v">${esc(typeName())} · ${esc(top3)}</p></div>
     <button class="head-btn" data-liked aria-label="끌린 술 ${state.liked.length}잔 보기">${icon.heart(state.liked.length > 0, 20)}<span data-n>${state.liked.length}</span></button>
     <a class="head-btn sm" href="#/nearby" aria-label="근처에서 한 잔, 주변 바 보기">${icon.pin()}근처</a>
     <a class="head-btn sm" href="#/q/1" style="color:var(--on-surface-v)">취향 다시</a>
+    <a class="head-btn ic" href="#/${other === "grid" ? "feed" : "reels"}" data-view="${other}" aria-label="${other === "grid" ? "모아 보기(그리드)로 바꾸기" : "한 잔씩 넘겨 보기(릴스)로 바꾸기"}">${VIEW_IC[other]}</a>
   </header>`;
 }
-function feed() {
+function reels() {
   ensureRecs();
+  state.feedView = "reels";
   const pages = () => state.order.map((id, i) => reelHTML(drinkById[id], i, state.order.length)).join("") + endHTML();
   return {
-    html: `<section class="screen feed-screen">${feedHead()}<div class="pager" id="pager">${pages()}</div>${tabbar("feed")}</section>`,
+    html: `<section class="screen feed-screen">${feedHead("reels")}<div class="pager" id="pager">${pages()}</div>${tabbar("feed")}</section>`,
     show(el) {
-      el.querySelector(".feed-head").outerHTML = feedHead();
+      state.feedView = "reels";
+      el.querySelector(".feed-head").outerHTML = feedHead("reels");
       el.querySelector(".feed-head [data-liked]").onclick = () => openLiked(el);
       if (feedDirty) { feedDirty = false; el._rerank?.(state.feedIndex); }
       el.querySelectorAll(".page[data-id]").forEach((p) => {
@@ -1123,10 +1286,10 @@ function card({ parts }) {
     </section>`,
     mount(el) {
       // 맛 카드에서 뒤로 가면 방문 순서와 상관없이 추천 피드로 간다 (팀 PR #24)
-      el.querySelector("[data-back]").addEventListener("click", () => go("#/feed", { replace: true, dir: "back" }));
+      el.querySelector("[data-back]").addEventListener("click", () => go(feedHash(), { replace: true, dir: "back" }));
       bindReviewLikes(el);
       bindFolds(el);
-      el.querySelector("[data-back2]")?.addEventListener("click", () => go("#/feed", { replace: true, dir: "back" }));
+      el.querySelector("[data-back2]")?.addEventListener("click", () => go(feedHash(), { replace: true, dir: "back" }));
       const row = el.querySelector("[data-fb]");
       const topWrap = el.querySelector("[data-top-wrap]");
       // 아래 '끌려요'와 오른쪽 위 하트는 같은 상태를 함께 바꾼다
@@ -1616,6 +1779,6 @@ function log() {
   };
 }
 
-const ROUTES = { "": start, q: question, types, result, feed, card, nearby, bar, try: tasting, review, log };
+const ROUTES = { "": start, q: question, types, result, feed, reels, card, nearby, bar, try: tasting, review, log };
 // 새로고침은 현재 화면과 기록을 유지한다 (팀 PR #24). 초기화는 내 기록의 '처음부터 다시 하기'에서만 한다.
 nav.start();

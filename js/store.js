@@ -18,7 +18,10 @@ const fresh = () => ({
   me: null, // 시연용 로그인 뒤 정해지는 { nick, level }
   feedIndex: 0,
   hintSeen: false,
-  swipeSeen: false, // 릴스처럼 위로 넘기는 안내를 봤는지
+  swipeSeen: false,
+  feedView: "grid", // 탐색 보기: grid(기본) 또는 reels
+  mine: true, // 탐색 그리드의 '내 취향' 필터
+  cat: null, // 탐색 그리드의 주종 필터 (null = 전체) // 릴스처럼 위로 넘기는 안내를 봤는지
 });
 
 export const state = load();
