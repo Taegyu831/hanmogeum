@@ -390,6 +390,20 @@ strong.kw { font-weight: 700; color: var(--on-surface); }
 .score .cells i.on { background: var(--primary); }
 .score > span:last-child { width: 24px; padding-left: 8px; font-size: 14px; color: var(--on-surface-v); }
 .expand { overflow: hidden; }
+/* 접었다 펴는 흰 상자 (팀원 UX 시안) */
+.fold { background: #fff; border-radius: 16px; box-shadow: 0 1px 3px rgba(43, 36, 48, .06); overflow: hidden; }
+.fold-head { width: 100%; min-height: 56px; padding: 12px 16px; display: flex; align-items: center; gap: 8px; text-align: left; }
+.fold-head .chev { color: var(--primary); display: grid; transition: rotate .25s var(--ease); }
+.fold[data-open="true"] .fold-head .chev { rotate: 180deg; }
+.fold-body { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .26s var(--ease); }
+.fold-body > div { overflow: hidden; }
+.fold[data-open="true"] .fold-body { grid-template-rows: 1fr; }
+.fold-in { padding: 12px 16px 16px; border-top: 1px solid var(--divider); display: flex; flex-direction: column; gap: 10px; }
+.fold .score > span:first-child { width: 80px; }
+.card .fold { margin-top: 4px; }
+.req { font-size: 12px; font-weight: 700; color: var(--primary); margin-left: 2px; }
+.opt { font-size: 12px; font-weight: 400; color: var(--on-surface-v); margin-left: 2px; }
+.rw-head { padding-bottom: 16px; border-bottom: 1px solid var(--divider); }
 .expand-head { width: 100%; min-height: 52px; padding: 0; display: flex; align-items: center; gap: 8px; }
 .expand-head .chev { color: var(--primary); transition: rotate .25s var(--ease); display: grid; }
 .expand[data-open="true"] .chev { rotate: 180deg; }
@@ -414,8 +428,9 @@ strong.kw { font-weight: 700; color: var(--on-surface); }
 .rv-who { flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; }
 .rv-who b { font-size: 14px; line-height: 20px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .rv-lv { flex: none; padding: 1px 7px; border-radius: 999px; font-size: 11px; line-height: 16px; font-weight: 700; }
-.rv-react { flex: none; font-size: 12px; line-height: 16px; color: var(--primary); font-weight: 500; }
-.rv-text { margin-top: 10px; font-size: 15px; line-height: 22px; }
+.rv-react { font-size: 14px; line-height: 20px; color: var(--primary); font-weight: 700; }
+.rv-text { margin-top: 2px; font-size: 15px; line-height: 22px; }
+.rv-text + .rv-head, .rv-react + .rv-head { margin-top: 10px; }
 .rv-chips { margin-top: 6px; display: flex; flex-wrap: wrap; gap: 4px 8px; font-size: 12px; line-height: 16px; color: var(--on-surface-v); }
 .rv-like { display: inline-flex; align-items: center; gap: 4px; margin-top: 8px; min-height: 32px; padding: 0 10px 0 8px; margin-left: -8px; border-radius: 999px; color: var(--on-surface-v); font-size: 13px; font-weight: 500; }
 .rv-like[aria-pressed="true"] { color: var(--primary); }

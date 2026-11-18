@@ -11,6 +11,10 @@ const fresh = () => ({
   passed: [],
   reviews: [],
   reviewLikes: {},
+  reservations: [],
+  nick: null,
+  preset: null,
+  skipped: false,
   me: null, // 시연용 로그인 뒤 정해지는 { nick, level }
   feedIndex: 0,
   hintSeen: false,
@@ -31,6 +35,7 @@ export function save() {
 }
 
 export function reset() {
+  for (const key of Object.keys(state)) delete state[key];
   Object.assign(state, fresh());
   save();
 }

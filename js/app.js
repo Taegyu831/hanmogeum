@@ -1,8 +1,8 @@
-import { state, save, reset } from "./store.js?v=11171442";
-import { AXES, Q1, Q2, Q3, prefsFromAnswers, rank, nudge, tasteType, typeBlurb, typeBars, explain } from "./reco.js?v=11171442";
-import { createNav, swallowClick } from "./nav.js?v=11171442";
-import { buzz, burst } from "./fx.js?v=11171442";
-import { C, logoSVG, pourLogo, glyph, drinkArt, drinkPhoto, icon, stepGlass, reduceMotion, FOS, level3, jarIcon, lemonIcon, bubbleGlass, pourGlass, LEVEL_WORD, emptyGlass } from "./brand.js?v=11171442";
+import { state, save, reset } from "./store.js?v=11181158";
+import { AXES, Q1, Q2, Q3, prefsFromAnswers, rank, nudge, tasteType, typeBlurb, typeBars, explain } from "./reco.js?v=11181158";
+import { createNav, swallowClick } from "./nav.js?v=11181158";
+import { buzz, burst } from "./fx.js?v=11181158";
+import { C, logoSVG, pourLogo, glyph, drinkArt, drinkPhoto, icon, stepGlass, reduceMotion, FOS, level3, jarIcon, lemonIcon, bubbleGlass, pourGlass, LEVEL_WORD, emptyGlass } from "./brand.js?v=11181158";
 
 // 화면 모습과 흐름은 안드로이드 앱(design/ui-refresh)과 같게 맞췄다.
 // 웹에서만 정한 것: 예약하기(평가용 완료 알림), 후기, 내 기록, 아래 탭 막대.
@@ -13,7 +13,7 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "
 const won = (n) => n.toLocaleString("ko-KR") + "원";
 
 /* ---------- 데이터 ---------- */
-const load = (f) => fetch(`data/${f}?v=11171442`).then((r) => r.json());
+const load = (f) => fetch(`data/${f}?v=11181158`).then((r) => r.json());
 const [DRINKS, BARS, CHIPS, SAMPLE_REVIEWS] = await Promise.all(
   ["drinks.json", "bars.json", "chips.json", "reviews.json"].map(load));
 const drinkById = Object.fromEntries(DRINKS.map((d) => [d.id, d]));
@@ -254,6 +254,20 @@ const kwHL = (text, aroma = false) => esc(text).replace(aroma ? AROMA_RE : TASTE
 const kwRow = (label, value, aroma = false) => `<div class="info-row kw-row"><b>${esc(label)}</b><span>${kwHL(value, aroma)}</span></div>`;
 const infoRow = (label, value, w72 = false) => `<div class="info-row ${w72 ? "w72" : ""}"><b>${esc(label)}</b><span>${esc(value)}</span></div>`;
 const virtualNote = () => `<p class="virtual-note"><span class="i" aria-hidden="true">i</span>바·가격·개봉일은 평가용 가상 데이터예요. 실제 예약·결제는 없어요.</p>`;
+// 접었다 펴는 흰 상자 (팀원 UX 시안): 제목 + 한 줄 요약, 누르면 내용이 펼쳐진다
+const fold = (title, sub, body, open = false) => `<div class="fold" data-open="${open}">
+  <button class="fold-head" data-fold aria-expanded="${open}"><span class="grow stack" style="gap:2px"><span class="t-ts" style="font-weight:700">${title}</span><span class="t-bs c-v">${sub}</span></span>
+    <span class="chev">${icon.chevronDown()}</span></button>
+  <div class="fold-body"><div><div class="fold-in">${body}</div></div></div></div>`;
+function bindFolds(el) {
+  el.querySelectorAll("[data-fold]").forEach((b) => (b.onclick = () => {
+    const f = b.closest(".fold"), open = f.dataset.open !== "true";
+    f.dataset.open = open;
+    b.setAttribute("aria-expanded", open);
+  }));
+}
+// 받침에 따라 이/가 (괄호 속 설명은 건너뛰고 마지막 한글로 판단)
+const iGa = (w) => { const t = w.replace(/\s*\([^)]*\)\s*$/, ""); const c = t.charCodeAt(t.length - 1) - 0xac00; return c >= 0 && c < 11172 && c % 28 ? "이" : "가"; };
 function bindBack(el) { el.querySelector("[data-back]")?.addEventListener("click", () => back()); }
 
 /* ---------- A. 시작 ---------- */
@@ -975,12 +989,12 @@ function reviewHTML(r) {
   const on = !!state.reviewLikes[key];
   const count = (r.likes || 0) + (on ? 1 : 0);
   return `<article class="rv">
+    <p class="rv-react">${esc(r.reaction)}</p>
+    ${r.text ? `<p class="rv-text">${esc(r.text)}</p>` : ""}
     <div class="rv-head">
       <span class="rv-av" style="background:${lv.bg};color:${lv.color};border-color:${lv.color}">${esc(nick[0])}</span>
       <span class="rv-who"><b>${esc(nick)}</b><span class="rv-lv" style="color:${lv.color};background:${lv.bg}">${lv.name}</span></span>
-      <span class="rv-react">${esc(r.reaction)}</span>
     </div>
-    ${r.text ? `<p class="rv-text">${esc(r.text)}</p>` : ""}
     ${r.chips?.length ? `<p class="rv-chips">${r.chips.map((c) => `<span>#${esc(c)}</span>`).join("")}</p>` : ""}
     <button class="rv-like" data-rv-like="${key}" aria-pressed="${on}" aria-label="이 후기 좋아요, ${count}개">${icon.heart(on, 16)}<span>${count}</span></button>
   </article>`;
@@ -1030,24 +1044,19 @@ function card({ parts }) {
         <p class="t-tm c-p" style="font-weight:500">“${esc(d.oneLine)}”</p>
         ${tasteIcons(d)}
         <div class="card stack gap12"><h3 class="t-tm">한눈에 보는 맛</h3>
-          ${kwRow("향", d.aroma, true)}${kwRow("맛", d.flavor)}${kwRow("느낌", d.feel)}${kwRow("비교", d.vsSoju)}</div>
+          ${kwRow("향", d.aroma, true)}${kwRow("맛", d.flavor)}
+          ${fold("느낌과 익숙한 술 비교", "목넘김 · 평소 마시던 술과 다른 점", `${kwRow("느낌", d.feel)}${kwRow("비교", d.vsSoju)}`)}</div>
         <div class="card-pc stack gap4"><p class="t-ll c-p" style="font-weight:700">왜 나에게 맞을까요?</p>
           <p class="t-bl c-pc">${kwHL(why)}</p>${caution ? `<p class="t-bm c-v">참고: ${esc(caution)}</p>` : ""}</div>
-        <div class="card expand" style="padding:0" data-open="false">
-          <button class="expand-head" data-toggle aria-expanded="false">
-            <span class="grow stack"><span class="t-tm">더 자세히 알아보기</span><span class="t-bm c-v">원료 · 만드는 법 · 맛 점수</span></span>
-            <span class="chev">${icon.chevronDown()}</span></button>
-          <div class="expand-body"><div><div class="expand-inner"><hr>
-            ${infoRow("원산지", d.origin)}${infoRow("도수", d.abvLabel)}${infoRow("원료", d.ingredients)}${infoRow("만드는 법", d.process)}
+        <div class="stack gap12">
+          ${fold("전체 맛·향 점수", "12개 항목 · 강도 0~5", AX.map(([k, l]) => `<div class="score" role="img" aria-label="${l} 5점 중 ${d.taste[k]}점"><span>${l}</span>
+            <span class="cells">${[1, 2, 3, 4, 5].map((x) => `<i class="${x <= d.taste[k] ? "on" : ""}"></i>`).join("")}</span><span>${d.taste[k]}</span></div>`).join(""))}
+          ${fold("원료·제조·숙성 정보", "원산지 · 도수 · 용어 풀이 포함", `${infoRow("원산지", d.origin)}${infoRow("도수", d.abvLabel)}${infoRow("원료", d.ingredients)}${infoRow("만드는 법", d.process)}
             ${infoRow("숙성", d.aging)}${infoRow("용어 풀이", d.glossary)}
-            <p class="t-ll c-v" style="margin-top:4px">맛·향 강도 (0~5)</p>
-            ${AX.map(([k, l]) => `<div class="score" role="img" aria-label="${l} 5점 중 ${d.taste[k]}점"><span>${l}</span>
-              <span class="cells">${[1, 2, 3, 4, 5].map((x) => `<i class="${x <= d.taste[k] ? "on" : ""}"></i>`).join("")}</span><span>${d.taste[k]}</span></div>`).join("")}
-            <p class="t-bs c-v">${d.verified ? "샘플 데이터의 확인 표시가 있는 항목이에요." : "사실 정보는 팀 확인 전 초안이에요. 제품별로 다를 수 있어요."}</p>
-          </div></div></div>
+            <p class="t-bs c-v">${d.verified ? "샘플 데이터의 확인 표시가 있는 항목이에요." : "사실 정보는 팀 확인 전 초안이에요. 제품별로 다를 수 있어요."}</p>`)}
         </div>
         <div class="stack gap8">
-          <h3 class="t-tm">맛본 사람들의 후기 ${reviews.length}</h3>
+          <h3 class="t-tm">후기 ${reviews.length}</h3>
           ${reviews.length ? `<div class="rv-list">${reviews.slice(0, 4).map(reviewHTML).join("")}</div>`
           : `<p class="t-bm c-v">아직 후기가 없어요. 맛보고 첫 후기를 남겨 주세요.</p>`}
         </div>
@@ -1058,15 +1067,11 @@ function card({ parts }) {
       </div>
     </section>`,
     mount(el) {
-      bindBack(el);
+      // 맛 카드에서 뒤로 가면 방문 순서와 상관없이 추천 피드로 간다 (팀 PR #24)
+      el.querySelector("[data-back]").addEventListener("click", () => go("#/feed", { replace: true, dir: "back" }));
       bindReviewLikes(el);
-      el.querySelector("[data-back2]")?.addEventListener("click", () => back());
-      const ex = el.querySelector(".expand");
-      el.querySelector("[data-toggle]").onclick = (e) => {
-        const open = ex.dataset.open !== "true";
-        ex.dataset.open = open;
-        e.currentTarget.setAttribute("aria-expanded", open);
-      };
+      bindFolds(el);
+      el.querySelector("[data-back2]")?.addEventListener("click", () => go("#/feed", { replace: true, dir: "back" }));
       const row = el.querySelector("[data-fb]");
       const topWrap = el.querySelector("[data-top-wrap]");
       // 아래 '끌려요'와 오른쪽 위 하트는 같은 상태를 함께 바꾼다
@@ -1200,7 +1205,7 @@ function nearby({ parts }) {
         if (row) row.scrollLeft = x;
       }));
       el.querySelector("[data-clear]")?.addEventListener("click", () => { nearbyCat = null; render(); });
-      el.querySelector("[data-other]")?.addEventListener("click", () => { nearbyCat = null; back("#/nearby"); });
+      el.querySelector("[data-other]")?.addEventListener("click", () => { nearbyCat = null; go("#/nearby", { replace: true, dir: "back" }); });
     },
   };
 }
@@ -1215,7 +1220,10 @@ function bar({ parts, q }) {
   if (!b) { go("#/nearby", { replace: true }); return null; }
   const ms = menusOf(b);
   const want = q.get("drink");
-  if (want) {
+  // 내 기록의 가상 예약에서 들어오면 그때 고른 바로 그 메뉴(용량)를 고른 상태로 연다 (팀 PR #24)
+  const bookedMenu = q.get("menu") && ms.find((m) => m.id === q.get("menu"));
+  if (bookedMenu) { if (!selOf(b.id).includes(bookedMenu.id)) selOf(b.id).push(bookedMenu.id); }
+  else if (want) {
     const wm = ms.find((m) => m.drinkId === want);
     if (wm && !selOf(b.id).some((id) => menuById(id)?.drinkId === want)) selOf(b.id).push(wm.id);
   }
@@ -1225,24 +1233,17 @@ function bar({ parts, q }) {
     const sel = selOf(b.id).includes(m.id);
     const exp = barExpanded.has(m.id);
     const why = d ? reasonText(d) : "";
-    return `<div class="menu" aria-checked="${sel}" data-expanded="${exp}" data-menu="${m.id}">
+    // 팀원 UX 시안: 줄은 이름과 용량·가격만, 고르면 맛 카드 링크와 '시음 조건 확인' 상자가 펼쳐진다
+    return `<div class="menu" aria-checked="${sel}" data-menu="${m.id}">
       <button class="pick" role="checkbox" aria-checked="${sel}" data-pick="${m.id}">
-        ${d ? drinkArt(d, 48, 64) : ""}
         <span class="grow stack" style="gap:2px"><span class="t-ts" style="font-weight:500">${esc(d?.name || m.drinkId)}</span>
-          <span class="t-bs c-v">${esc(d?.category || "주류")} · ${esc(d?.abvLabel || "도수 정보 없음")}</span>
           <span class="t-ll c-p">${m.ml}mL · ${won(m.price)}</span></span>
         <span class="chk" aria-hidden="true">${icon.check(14)}</span>
       </button>
       <div class="more"><div><div class="more-in">
-        ${d ? `<p class="t-bl c-p">“${esc(d.oneLine)}”</p>` : ""}
-        <p class="t-bs c-v">${volNote(m)} · ${openedLabel(m)}</p>
-        <p class="t-bs c-v">${statusNote(m)}</p>
-        ${ABV_NOTE[m.drinkId] ? `<p class="note-box">${ABV_NOTE[m.drinkId]}</p>` : ""}
-        <button class="btn-t" data-exp="${m.id}" style="align-self:flex-start;padding:0">${exp ? "간단히 보기" : "원료·만드는 법 자세히"}</button>
-        <div class="detail">${d ? `${infoRow("원산지", d.origin, true)}${infoRow("향", d.aroma, true)}${infoRow("맛", d.flavor, true)}${infoRow("느낌", d.feel, true)}
-          ${infoRow("비교", d.vsSoju, true)}${infoRow("원료", d.ingredients, true)}${infoRow("만드는 법", d.process, true)}${infoRow("숙성", d.aging, true)}
-          ${infoRow("용어 풀이", d.glossary, true)}${infoRow("주의", d.caution, true)}${why ? infoRow("추천 이유", why, true) : ""}
-          <p class="t-bs c-v">${d.verified ? "출처 확인이 끝난 샘플 데이터예요." : "술 정보는 팀 확인 전 초안이고, 바·가격·개봉일은 평가용 가상 데이터예요."}</p>` : ""}</div>
+        ${d ? `<a class="btn-t" href="#/card/${d.id}" style="align-self:flex-start;padding:0">맛·향과 술 정보 보기 ${icon.chevronRight(16)}</a>` : ""}
+        ${fold("시음 조건 확인", "개봉일 · 가상 재고 안내", `<p class="t-bm">${volNote(m)} · ${openedLabel(m)}</p><p class="t-bm c-v">${statusNote(m)}</p>
+          ${ABV_NOTE[m.drinkId] ? `<p class="note-box">${ABV_NOTE[m.drinkId]}</p>` : ""}`)}
       </div></div></div>
     </div>`;
   };
@@ -1257,10 +1258,10 @@ function bar({ parts, q }) {
       : `${sel.length}개 선택 · 합계 예시 ${won(total)}`;
     const allDone = sel.length && !toReserve().length;
     return `<p class="t-bm c-v sel-sum" aria-live="polite" style="margin-bottom:8px">${summary}</p>
-      <div class="btns"><button class="btn btn-s" data-reserve style="flex:1" ${sel.length ? "" : "disabled"} ${allDone ? 'aria-disabled="true"' : ""}>${allDone ? "예약됨 ✓" : sel.length > 1 ? `${toReserve().length}개 예약하기` : "예약하기"}</button>
+      <div class="btns"><button class="btn btn-s" data-reserve style="flex:1" ${sel.length ? "" : "disabled"} ${allDone ? 'aria-disabled="true"' : ""}>${allDone ? "가상 예약됨 ✓" : sel.length > 1 ? `${toReserve().length}개 가상 예약하기` : "가상 예약하기"}</button>
       <button class="btn btn-p" data-try style="flex:2" ${sel.length ? "" : "disabled"}>${sel.length ? (sel.length > 1 ? `${sel.length}잔 맛보기 체험` : `${sel[0].ml}mL 맛보기 체험`) : "메뉴를 골라 주세요"}</button></div>`;
   };
-  const focusMenu = focus && picked().some((m) => m.drinkId === focus.id);
+  const hasWanted = focus && ms.some((m) => m.drinkId === focus.id);
   return {
     html: `<section class="screen">
       ${topbar("바 정보", { backLabel: "주변 바 목록으로 돌아가기" })}
@@ -1272,11 +1273,8 @@ function bar({ parts, q }) {
           <p class="t-bm">${[...catsOf(b), volRange(ms), priceRange(ms)].map(esc).join(" · ")}</p>
           ${virtualNote()}
         </div>
-        ${focusMenu ? `<div class="card-pc stack gap8"><p class="t-ll c-p">찾던 술이 있어요</p>
-          <div class="row gap12">${drinkArt(focus, 48, 64)}<div class="grow stack" style="gap:2px"><span class="t-tm">${esc(focus.name)}</span>
-            <span class="t-bm c-p">“${esc(focus.oneLine)}”</span></div></div>
-          ${reasonText(focus) ? `<p class="t-bm">${esc(reasonText(focus))}</p>` : ""}
-          <a class="btn-t" href="#/card/${focus.id}" style="align-self:flex-start;padding:0">맛 카드 보기 ${icon.chevronRight(16)}</a></div>` : ""}
+        ${focus ? (hasWanted ? `<p class="t-bm c-p">찾던 술 <b>${esc(focus.name)}</b>${iGa(focus.name)} 메뉴에 있어요.</p>`
+          : `<p class="note-box">찾던 술 ${esc(focus.name)}${iGa(focus.name)} 이 가상 바의 시음 메뉴에는 없어요. 아래에서 다른 메뉴를 고르거나 주변 바 목록으로 돌아가 주세요.</p>`) : ""}
         <div class="stack gap8"><h3 class="t-tm">시음 메뉴 ${ms.length}개</h3><p class="t-bm c-v">맛볼 메뉴를 골라 주세요. 여러 개 골라도 돼요.</p>
           <div class="stack gap8" role="group" aria-label="시음 메뉴">${ms.map(menuCard).join("")}</div></div>
         <div class="stack gap8" style="background:rgba(245,239,241,.6);border-radius:20px;padding:16px">
@@ -1312,6 +1310,7 @@ function bar({ parts, q }) {
         foot.innerHTML = footer();
         bindFoot();
       }));
+      bindFolds(el);
       el.querySelectorAll("[data-exp]").forEach((x) => (x.onclick = () => {
         const id = x.dataset.exp;
         if (barExpanded.has(id)) barExpanded.delete(id); else barExpanded.add(id);
@@ -1327,9 +1326,9 @@ function reserve(screen, b, list, done) {
   pop.className = "dialog-wrap";
   pop.innerHTML = `<div class="dialog" role="alertdialog" aria-modal="true" aria-labelledby="rsv-t">
     <span class="ok">${icon.check(28)}</span>
-    <h2 id="rsv-t" class="t-tl">예약 완료!</h2>
-    <p class="t-bm c-v" style="margin-top:8px">${esc(b.name)}<br>${list.map((m) => `${esc(m.drink?.name)} ${m.ml}mL · 예시 ${won(m.price)}`).join("<br>")}${list.length > 1 ? `<br><b>합계 예시 ${won(list.reduce((t, m) => t + m.price, 0))}</b>` : ""}<br>오늘 ${esc(b.hours.split("~")[0])} 이후 방문하면 바로 준비해 드려요.</p>
-    <p class="t-bs c-v" style="margin-top:10px">평가용 화면이라 실제 예약은 되지 않아요</p>
+    <h2 id="rsv-t" class="t-tl">가상 예약 완료!</h2>
+    <p class="t-bm c-v" style="margin-top:8px">${esc(b.name)}<br>${list.map((m) => `${esc(m.drink?.name)} ${m.ml}mL · 예시 ${won(m.price)}`).join("<br>")}${list.length > 1 ? `<br><b>합계 예시 ${won(list.reduce((t, m) => t + m.price, 0))}</b>` : ""}<br>평가용으로 선택한 시음 메뉴를 내 기록에 저장했어요.</p>
+    <p class="t-bs c-v" style="margin-top:10px">시연용 가상 예약이며 실제 매장에는 예약이나 결제가 전달되지 않아요</p>
     <button class="btn btn-p" data-ok style="margin-top:16px">확인</button>
   </div>`;
   screen.append(pop);
@@ -1452,19 +1451,21 @@ function review({ parts, q }) {
   const b = barById[q.get("bar")];
   const ml = q.get("ml");
   const form = { reaction: null, chips: [], text: "" };
-  const REACT = [["딱 내 취향", "다시 마실래요"], ["괜찮았어요", "한 번쯤 좋아요"], ["내 취향 아님", "다른 걸 볼래요"]];
+  const REACT = [["딱 내 취향", "맛보고 싶어요"], ["괜찮았어요", "조금 궁금해요"], ["내 취향 아님", "다른 맛을 찾을래요"]];
   return {
     html: `<section class="screen">
-      ${topbar("맛본 후기")}
+      ${topbar("가상 시음 후기")}
       <div class="scroll"><div class="pad stack" style="gap:24px;padding-bottom:32px">
-        <div class="card row gap12">${drinkArt(d, 48, 64)}<div class="grow stack" style="gap:2px">
-          <span class="t-bs c-v">${b ? `${esc(b.name)} · ` : ""}${ml ? `${esc(ml)}mL` : "직접 맛본 후기"}</span><span class="t-tm">${esc(d.name)}</span></div></div>
-        <div class="stack gap8"><h2 class="t-tm">내 입맛에 맞았어요?</h2>
-          <div class="reacts" role="radiogroup" aria-label="내 입맛에 맞았는지">${REACT.map(([r, s]) => `<button class="sel react press" role="radio" aria-checked="false" data-r="${r}"><span class="t-ll">${r}</span><span class="t-bs c-v">${s}</span></button>`).join("")}</div></div>
-        <div class="stack gap8"><h2 class="t-tm">어떤 맛이 느껴졌어요?</h2>
+        <div class="row gap12 rw-head">${drinkArt(d, 40, 54)}<div class="grow stack" style="gap:2px">
+          <span class="t-bs c-v">${b ? `${esc(b.name)} · ` : ""}${ml ? `${esc(ml)}mL · ` : ""}가상 체험</span><span class="t-tm">${esc(d.name)}</span></div></div>
+        <div class="stack gap8"><h2 class="t-tm">이런 맛, 내 입맛에 맞을 것 같나요? <span class="req">필수</span></h2>
+          <p class="t-bs c-v">설명을 보고 상상한 첫 인상을 골라 주세요.</p>
+          <div class="reacts" role="radiogroup" aria-label="내 입맛에 맞을 것 같은지 (필수)" aria-required="true">${REACT.map(([r, s]) => `<button class="sel react press" role="radio" aria-checked="false" data-r="${r}"><span class="t-ll">${r}</span><span class="t-bs c-v">${s}</span></button>`).join("")}</div></div>
+        <div class="stack gap8"><h2 class="t-ts" style="font-weight:700">기억에 남는 맛·향 <span class="opt">선택</span></h2>
+          <p class="t-bs c-v">설명에서 인상 깊었던 특징을 골라 주세요. 여러 개 골라도 좋아요.</p>
           <div class="chips">${CHIPS.map((c) => `<button class="fpill" data-c="${esc(c.label)}" aria-pressed="false">${esc(c.label)}</button>`).join("")}</div></div>
-        <div class="stack gap8"><h2 class="t-tm">한 줄 후기 <span class="t-bs c-v">(선택)</span></h2>
-          <textarea class="field" rows="2" maxlength="80" placeholder="예: 복숭아 아이스티인데 술이라 신기했어요"></textarea></div>
+        <div class="stack gap8"><h2 class="t-ts" style="font-weight:700">한 줄 의견 <span class="opt">선택 · 80자 이내</span></h2>
+          <textarea class="field" rows="2" maxlength="80" placeholder="예: 복숭아 향이 궁금해서 실제로 맛보고 싶어요."></textarea></div>
       </div></div>
       <div class="bottom"><button class="btn btn-p" data-submit disabled>후기 남기기</button>
         <p class="t-bs c-v center" style="margin-top:8px">남긴 후기는 맛 카드와 내 취향에 반영돼요</p></div>
@@ -1520,7 +1521,7 @@ function log() {
           <div><p class="t-hl" style="font-size:22px;line-height:30px">나는 <span style="color:${lv.color}">${lv.name}</span>${(lv.name.charCodeAt(lv.name.length - 1) - 0xac00) % 28 ? "이에요" : "예요"}!</p>
           <p class="t-bs c-v">${(() => { const n = useCount(), k = levelIndexFor(n); return k < LEVELS.length - 1 ? `한모금 이용 ${n}번 · ${LEVELS[k + 1].name}까지 ${LEVEL_AT[k + 1] - n}번 남았어요` : `한모금 이용 ${n}번 · 가장 높은 단계예요`; })()}</p></div></div>
         <div class="lv-ladder">${LEVELS.map((l, i) => `<span class="${l.name === lv.name ? "on" : ""}" style="--c:${l.color};--b:${l.bg}"><b>${l.name}</b><i>${LEVEL_AT[i]}번~</i></span>`).join("")}</div>
-        <p class="t-bs c-v" style="margin-top:-12px">예약하거나 맛본 후기를 남길 때마다 이용 횟수가 올라가요.</p>`; })()}
+        <p class="t-bs c-v" style="margin-top:-12px">가상 예약하거나 맛본 후기를 남길 때마다 이용 횟수가 올라가요.</p>`; })()}
         <div class="card stack gap12">
           <p class="t-ll c-p">지금 내 취향</p>
           <h2 class="t-hl" style="font-size:26px;line-height:34px">${esc(typeName())}</h2>
@@ -1537,8 +1538,8 @@ function log() {
             <span class="t-bs nm">${esc(d.name)}</span></a>`).join("")}</div></div>` : ""}
         <div><h2 class="t-tm" style="margin-bottom:8px">끌린 술 ${liked.length}</h2>
           ${liked.length ? liked.map((d) => mini(d, `“${d.oneLine}”`)).join("") : `<p class="t-bm c-v">피드에서 끌려요를 누르면 여기 모여요.</p>`}</div>
-        <div><h2 class="t-tm" style="margin-bottom:8px">예약한 곳 ${rsv.length}</h2>
-          ${rsv.length ? rsv.map((r) => mini(drinkById[r.drinkId], `${barById[r.barId].name} · ${r.ml}mL`, `#/bar/${r.barId}?drink=${r.drinkId}`)).join("") : `<p class="t-bm c-v">바 정보에서 예약하기를 누르면 여기 모여요.</p>`}</div>
+        <div><h2 class="t-tm" style="margin-bottom:8px">가상 예약한 곳 ${rsv.length}</h2>
+          ${rsv.length ? rsv.map((r) => mini(drinkById[r.drinkId], `${barById[r.barId].name} · ${r.ml}mL`, `#/bar/${r.barId}?drink=${r.drinkId}&menu=${encodeURIComponent(r.menuId || `${r.barId}_${r.drinkId}_${r.ml}`)}`)).join("") : `<p class="t-bm c-v">바 정보에서 가상 예약하기를 누르면 여기 모여요.</p>`}</div>
         <div><h2 class="t-tm" style="margin-bottom:8px">직접 맛본 후기 ${state.reviews.length}</h2>
           ${state.reviews.length ? state.reviews.map((r) => mini(drinkById[r.drinkId], `${r.reaction}${r.barId ? ` · ${barById[r.barId].name}` : ""}${r.text ? ` · ${r.text}` : ""}`)).join("") : `<p class="t-bm c-v">맛보기 체험을 마치고 후기를 남기면 여기 쌓여요.</p>`}</div>
         <p class="center"><button class="btn-t v" data-reset>처음부터 다시 하기</button></p>
@@ -1547,7 +1548,14 @@ function log() {
     </section>`,
     mount(el) {
       el.querySelector("[data-reset]").onclick = () => {
-        if (confirm("취향, 끌린 술, 예약, 후기를 모두 지울까요?")) { reset(); dropFeed(); go("#/", { replace: true, dir: "back" }); }
+        if (confirm("취향, 끌린 술, 가상 예약, 후기를 모두 지울까요?")) {
+          reset();
+          dropFeed();
+          Object.keys(barSel).forEach((key) => delete barSel[key]);
+          barExpanded.clear();
+          nearbyCat = null;
+          go("#/", { replace: true, dir: "back" });
+        }
       };
     },
   };
