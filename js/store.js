@@ -21,7 +21,10 @@ const fresh = () => ({
   swipeSeen: false,
   feedView: "grid", // 탐색 보기: grid(기본) 또는 reels
   mine: true, // 탐색 그리드의 '내 취향' 필터
-  cat: null, // 탐색 그리드의 주종 필터 (null = 전체) // 릴스처럼 위로 넘기는 안내를 봤는지
+  cat: null, // 탐색 그리드의 주종 필터 (null = 전체)
+  taste: { sweet: 0, sour: 0, fizz: 0 }, // 탐색 그리드의 맛 필터 (0 = 상관없음, 1~3 = 약함·보통·강함)
+  tastings: [], // 끝까지 한 맛보기 체험 기록
+  likeHintSeen: false, // 끌려요 위치 안내를 봤는지 // 릴스처럼 위로 넘기는 안내를 봤는지
 });
 
 export const state = load();

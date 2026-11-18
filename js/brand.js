@@ -249,9 +249,9 @@ function vessel(d) {
 }
 
 /** 앱 DrinkArtTile: 옅은 타일 위에 술병. 장식이라 화면 읽기에서 건너뛴다. */
+// 작은 썸네일도 그림 대신 생성 사진을 쓴다 (2026-11-18 결정). 예전 그림은 vessel()에 남겨 둔다.
 export function drinkArt(d, w = 72, h = 96) {
-  const cw = w * 0.6, ch = h - 12;
-  return `<span class="art" style="width:${w}px;height:${h}px" aria-hidden="true"><svg width="${cw}" height="${ch}" viewBox="0 0 40 100">${vessel(d)}</svg></span>`;
+  return drinkPhoto(d, w, h, true);
 }
 
 // 크게 보이는 곳(피드, 맛 카드)에만 쓰는 실사 이미지. 작은 썸네일은 위의 그림을 그대로 쓴다.

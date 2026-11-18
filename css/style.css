@@ -560,7 +560,7 @@ strong.kw { font-weight: 700; color: var(--on-surface); }
 .tile-d .rk { position: absolute; left: 5px; top: 5px; display: inline-flex; align-items: center; gap: 1px; height: 18px; padding: 0 6px 0 4px; border-radius: 999px; background: var(--primary); color: #fff; font-size: 10px; font-weight: 700; }
 .tile-d .rk:not(:has(.medal)) { padding-left: 6px; }
 .tile-d .lk { position: absolute; right: 5px; top: 5px; width: 22px; height: 22px; border-radius: 50%; background: #fff; display: grid; place-items: center; color: var(--primary); }
-.tile-d .nm { padding: 0 8px; min-height: 34px; font-size: 12.5px; line-height: 17px; font-weight: 600; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; word-break: keep-all; }
+.tile-d .nm { padding: 0 8px; font-size: 12.5px; line-height: 17px; font-weight: 600; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; word-break: keep-all; }
 .mts { display: flex; padding: 0 4px; }
 .mt { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; }
 .mt .mi { display: grid; height: 16px; place-items: center; }
@@ -596,3 +596,34 @@ strong.kw { font-weight: 700; color: var(--on-surface); }
 .pv-btn.pass[aria-pressed="true"] { background: var(--on-surface); color: #fff; box-shadow: none; }
 .pv-go { flex: none; width: auto; margin: 0 16px 16px; gap: 2px; }
 @media (prefers-reduced-motion: reduce) { .pv-wrap, .pv { transition: none; } }
+
+/* 그리드 칸 가격, 거르기 칩 드롭다운 */
+.tile-d .pr { padding: 0 8px; margin-top: -3px; font-size: 11px; line-height: 15px; font-weight: 600; color: var(--primary); }
+.tile-d .mts { margin-top: auto; }
+.fchip.dd { padding: 0 9px 0 13px; gap: 2px; }
+.fchip.dd svg { opacity: .7; }
+.fchip.clr { width: 34px; padding: 0; justify-content: center; color: var(--on-surface-v); }
+.opt-list { display: flex; flex-direction: column; margin-top: 4px; }
+.opt-row { min-height: 52px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--divider); text-align: left; font-size: 16px; font-weight: 500; }
+.opt-row .t-bs { margin-left: 6px; font-weight: 400; }
+.opt-row .ring { width: 22px; height: 22px; flex: none; border-radius: 50%; border: 2px solid var(--outline); display: grid; place-items: center; }
+.opt-row[aria-checked="true"] .ring { border-color: var(--primary); }
+.opt-row[aria-checked="true"] .ring i { width: 11px; height: 11px; border-radius: 50%; background: var(--primary); }
+.tf-row { display: flex; flex-direction: column; gap: 8px; padding: 12px 0; border-bottom: 1px solid var(--divider); }
+.tf-l { display: flex; align-items: center; gap: 6px; font-size: 15px; }
+.seg { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.seg button { min-height: 44px; border-radius: 12px; background: var(--surface-v); font-size: 13px; font-weight: 500; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 16px; }
+.seg button .sd { font-style: normal; font-size: 7px; letter-spacing: 1px; line-height: 9px; color: var(--primary); }
+.seg button[aria-checked="true"] { background: var(--primary); color: #fff; }
+.seg button[aria-checked="true"] .sd { color: #fff; }
+
+/* 끌려요 위치 안내 (처음 한 번) */
+.hint { position: relative; }
+.pv-btn.hint, .rail-btn.hint .ic { animation: likePulse 1.2s ease-in-out infinite; }
+@keyframes likePulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(139, 39, 68, .45); } 50% { box-shadow: 0 0 0 8px rgba(139, 39, 68, 0); } }
+.like-tip { position: absolute; bottom: calc(100% + 10px); right: 0; z-index: 5; padding: 8px 12px; border-radius: 12px; background: var(--on-surface); color: #fff; font-size: 13px; line-height: 18px; font-weight: 700; text-align: left; white-space: nowrap; pointer-events: none; animation: fadeIn .25s ease-out; }
+.like-tip small { font-size: 11.5px; font-weight: 400; opacity: .85; }
+.like-tip::after { content: ""; position: absolute; top: 100%; right: 28px; border: 6px solid transparent; border-top-color: var(--on-surface); }
+.like-tip.side { bottom: auto; top: 6px; right: calc(100% + 10px); }
+.like-tip.side::after { top: 14px; right: -12px; border-top-color: transparent; border-left-color: var(--on-surface); }
+@media (prefers-reduced-motion: reduce) { .pv-btn.hint, .rail-btn.hint .ic { animation: none; } }

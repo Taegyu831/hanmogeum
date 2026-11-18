@@ -1,8 +1,8 @@
-import { state, save, reset } from "./store.js?v=11181253";
-import { AXES, Q1, Q2, Q3, prefsFromAnswers, rank, scoreDrink, nudge, tasteType, typeBlurb, typeBars, explain } from "./reco.js?v=11181253";
-import { createNav, swallowClick } from "./nav.js?v=11181253";
-import { buzz, burst } from "./fx.js?v=11181253";
-import { C, logoSVG, pourLogo, glyph, drinkArt, drinkPhoto, icon, stepGlass, reduceMotion, FOS, level3, jarIcon, lemonIcon, bubbleGlass, pourGlass, LEVEL_WORD, emptyGlass } from "./brand.js?v=11181253";
+import { state, save, reset } from "./store.js?v=11181305";
+import { AXES, Q1, Q2, Q3, prefsFromAnswers, rank, scoreDrink, nudge, tasteType, typeBlurb, typeBars, explain } from "./reco.js?v=11181305";
+import { createNav, swallowClick } from "./nav.js?v=11181305";
+import { buzz, burst } from "./fx.js?v=11181305";
+import { C, logoSVG, pourLogo, glyph, drinkArt, drinkPhoto, icon, stepGlass, reduceMotion, FOS, level3, jarIcon, lemonIcon, bubbleGlass, pourGlass, LEVEL_WORD, emptyGlass } from "./brand.js?v=11181305";
 
 // 화면 모습과 흐름은 안드로이드 앱(design/ui-refresh)과 같게 맞췄다.
 // 웹에서만 정한 것: 예약하기(평가용 완료 알림), 후기, 내 기록, 아래 탭 막대.
@@ -13,7 +13,7 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "
 const won = (n) => n.toLocaleString("ko-KR") + "원";
 
 /* ---------- 데이터 ---------- */
-const load = (f) => fetch(`data/${f}?v=11181253`).then((r) => r.json());
+const load = (f) => fetch(`data/${f}?v=11181305`).then((r) => r.json());
 const [DRINKS, BARS, CHIPS, SAMPLE_REVIEWS] = await Promise.all(
   ["drinks.json", "bars.json", "chips.json", "reviews.json"].map(load));
 const drinkById = Object.fromEntries(DRINKS.map((d) => [d.id, d]));
@@ -625,6 +625,7 @@ function result() {
       state.feedIndex = 0;
       state.mine = true;
       state.cat = null;
+      state.taste = { sweet: 0, sour: 0, fizz: 0 };
       save();
       dropFeed();
     });
@@ -681,16 +682,59 @@ function tileHTML(d) {
     aria-label="${esc(d.name)}${r ? `, 추천 ${r}위` : ""}${liked ? ", 끌린 술" : ""}${passed ? ", 패스한 술" : ""}. 단맛 ${LEVEL_WORD[sw]}, 신맛 ${LEVEL_WORD[so]}, 탄산 ${LEVEL_WORD[fz]}. 미리보기 열기">
     <span class="ph">${drinkPhoto(d, 60, 88, true)}${r ? `<span class="rk">${medal(r, 12)}${r}위</span>` : ""}${liked ? `<span class="lk">${icon.heart(true, 13)}</span>` : ""}</span>
     <span class="nm">${esc(shortName(d.name))}</span>
+    ${cheapest(d.id) ? `<span class="pr">${cheapest(d.id).ml}mL ${won(cheapest(d.id).price)}~</span>` : ""}
     ${miniTaste(d)}
   </button>`;
 }
 let gridScroll = 0;
+// 맛 필터: 단맛·신맛·탄산을 1(약함)~3(강함)으로 고른다. 0은 상관없음.
+const TASTE_F = [["sweet", "단맛", (on) => jarIcon(on, 20)], ["sour", "신맛", (on) => lemonIcon(on, 20)], ["fizz", "탄산", (on) => bubbleGlass(on ? 2 : 0, 20)]];
+const tasteF = () => (state.taste ||= { sweet: 0, sour: 0, fizz: 0 });
+const tasteOn = () => TASTE_F.filter(([k]) => tasteF()[k] > 0);
+const passTaste = (d) => TASTE_F.every(([k]) => !tasteF()[k] || level3(d.taste[k]) === tasteF()[k]);
+const gridIds = () => {
+  let ids = state.mine ? mineIds() : allIds();
+  if (state.cat) ids = ids.filter((id) => catKey(drinkById[id]) === state.cat);
+  return ids.filter((id) => passTaste(drinkById[id]));
+};
+// 칩을 누르면 아래에서 올라오는 고르기 창
+function filterSheet(screen, kind, onApply) {
+  const sh = document.createElement("div");
+  sh.className = "scrim";
+  const body = () => kind === "cat"
+    ? `<h2 class="t-tl">주종</h2><div class="opt-list" role="radiogroup" aria-label="주종">${["전체", ...CAT_ORDER].map((c) => `<button class="opt-row" role="radio" aria-checked="${(state.cat || "전체") === c}" data-c="${c}">
+        <span class="grow">${c}${c === "기타" ? `<span class="c-v t-bs"> 진 · 럼 · 사케 · 브랜디 · 데킬라</span>` : ""}</span><span class="ring" aria-hidden="true"><i></i></span></button>`).join("")}</div>`
+    : `<h2 class="t-tl">맛 세기</h2><p class="t-bm c-v">고른 세기와 똑같은 술만 보여요.</p>
+      ${TASTE_F.map(([k, l, ic]) => `<div class="tf-row"><span class="tf-l">${ic(true)}<b>${l}</b></span>
+        <div class="seg" role="radiogroup" aria-label="${l}">${["상관없음", "약함", "보통", "강함"].map((t, v) => `<button role="radio" aria-checked="${tasteF()[k] === v}" data-k="${k}" data-v="${v}">${v ? `<i class="sd">${"●".repeat(v)}</i>` : ""}${t}</button>`).join("")}</div></div>`).join("")}
+      <div class="btns" style="margin-top:12px"><button class="btn btn-s" data-clear style="flex:1">초기화</button><button class="btn btn-p" data-done style="flex:2">${gridIds().length}잔 보기</button></div>`;
+  sh.innerHTML = `<div class="sheet-m" role="dialog" aria-modal="true" aria-label="${kind === "cat" ? "주종 고르기" : "맛 세기 고르기"}"><div class="grip" aria-hidden="true"></div><div class="body"></div></div>`;
+  const b = sh.querySelector(".body");
+  const draw = () => { b.innerHTML = body(); };
+  draw();
+  const close = () => { sh.remove(); onApply(); };
+  sh.addEventListener("click", (e) => {
+    if (e.target === sh) return close();
+    const c = e.target.closest("[data-c]");
+    if (c) { state.cat = c.dataset.c === "전체" ? null : c.dataset.c; save(); buzz(5); return setTimeout(close, 120); }
+    const v = e.target.closest("[data-k]");
+    if (v) { tasteF()[v.dataset.k] = Number(v.dataset.v); save(); buzz(4); return draw(); }
+    if (e.target.closest("[data-clear]")) { state.taste = { sweet: 0, sour: 0, fizz: 0 }; save(); return draw(); }
+    if (e.target.closest("[data-done]")) close();
+  });
+  screen.append(sh);
+}
 function feed() {
   ensureRecs();
   state.feedView = "grid";
   save();
-  const chips = () => `<button class="fchip mine" data-mine aria-pressed="${state.mine}">${state.mine ? icon.check(14) : ""}내 취향</button><span class="fsep" aria-hidden="true"></span>
-    ${["전체", ...CAT_ORDER].map((c) => `<button class="fchip" data-cat="${c}" aria-pressed="${(state.cat || "전체") === c}">${c}</button>`).join("")}`;
+  const chips = () => {
+    const tl = tasteOn().map(([k, l]) => `${l} ${["", "약함", "보통", "강함"][tasteF()[k]]}`).join(" · ");
+    return `<button class="fchip mine" data-mine aria-pressed="${state.mine}">${state.mine ? icon.check(14) : ""}내 취향</button><span class="fsep" aria-hidden="true"></span>
+    <button class="fchip dd" data-sheet="cat" aria-haspopup="dialog" aria-pressed="${!!state.cat}">${state.cat || "주종"}${icon.chevronDown(14)}</button>
+    <button class="fchip dd" data-sheet="taste" aria-haspopup="dialog" aria-pressed="${!!tl}">${tl || "맛"}${icon.chevronDown(14)}</button>
+    ${state.cat || tl ? `<button class="fchip clr" data-reset-f aria-label="주종·맛 필터 지우기">${icon.cross(11)}</button>` : ""}`;
+  };
   return {
     html: `<section class="screen grid-screen">${feedHead("grid")}
       <div class="fchips" role="toolbar" aria-label="술 거르기" data-noswipe>${chips()}</div>
@@ -700,15 +744,18 @@ function feed() {
       const sc = el.querySelector("[data-gs]");
       const draw = () => {
         el.querySelector(".fchips").innerHTML = chips();
-        let ids = state.mine ? mineIds() : allIds();
-        if (state.cat) ids = ids.filter((id) => catKey(drinkById[id]) === state.cat);
-        const what = state.cat ? `${state.cat} ` : "";
+        const ids = gridIds();
+        const what = [state.cat, ...tasteOn().map(([k, l]) => `${l} ${["", "약함", "보통", "강함"][tasteF()[k]]}`)].filter(Boolean).join(" · ");
+        const whatS = what ? `${what} ` : "";
         el.querySelector(".g-note").innerHTML = state.mine
-          ? `질문 답으로 고른 ${what}<b>${ids.length}잔</b>이에요. 끌려요·패스할수록 바뀌고, <b>내 취향</b>을 끄면 전체를 볼 수 있어요.`
-          : `전체 ${what}<b>${ids.length}잔</b>이에요. <b>내 취향</b>을 켜면 질문 답에 맞는 술만 보여요.`;
+          ? `질문 답으로 고른 ${whatS}<b>${ids.length}잔</b>이에요. 끌려요·패스할수록 바뀌고, <b>내 취향</b>을 끄면 전체를 볼 수 있어요.`
+          : `${whatS || "전체 "}<b>${ids.length}잔</b>이에요. <b>내 취향</b>을 켜면 질문 답에 맞는 술만 보여요.`;
         el.querySelector(".dgrid").innerHTML = ids.length ? ids.map((id) => tileHTML(drinkById[id])).join("")
-          : `<div class="g-empty"><p class="t-bm c-v">내 취향에 맞는 ${esc(state.cat || "술")}${iGa(state.cat || "술")} 아직 없어요.</p><button class="btn btn-s" data-allcat>내 취향 끄고 전체 ${esc(state.cat || "")} 보기</button></div>`;
+          : `<div class="g-empty"><p class="t-bm c-v">조건에 맞는 술이 없어요.</p>
+            ${state.mine ? `<button class="btn btn-s" data-allcat>내 취향 끄고 다시 보기</button>` : ""}
+            ${state.cat || tasteOn().length ? `<button class="btn-t" data-reset-f>주종·맛 필터 지우기</button>` : ""}</div>`;
         el.querySelector("[data-allcat]")?.addEventListener("click", () => { state.mine = false; save(); draw(); });
+        el.querySelector(".dgrid [data-reset-f]")?.addEventListener("click", () => { state.cat = null; state.taste = { sweet: 0, sour: 0, fizz: 0 }; save(); draw(); });
       };
       const head = () => {
         el.querySelector(".feed-head").outerHTML = feedHead("grid");
@@ -721,8 +768,9 @@ function feed() {
       el.querySelector(".fchips").addEventListener("click", (e) => {
         const b = e.target.closest("button");
         if (!b) return;
+        if (b.dataset.sheet) return filterSheet(el, b.dataset.sheet, () => { draw(); sc.scrollTop = 0; });
         if (b.dataset.mine !== undefined) { state.mine = !state.mine; toast(state.mine ? "내 취향에 맞는 술만 보여요" : "전체 술을 보여요"); }
-        else state.cat = b.dataset.cat === "전체" ? null : b.dataset.cat;
+        else if (b.dataset.resetF !== undefined) { state.cat = null; state.taste = { sweet: 0, sour: 0, fizz: 0 }; }
         save();
         buzz(5);
         draw();
@@ -761,11 +809,20 @@ function openPreview(screen, d, onClose) {
   const paint = () => {
     const L = state.liked.includes(d.id), P = state.passed.includes(d.id);
     like.setAttribute("aria-pressed", L);
+    like.querySelector(".like-tip")?.remove();
+    like.classList.remove("hint");
     like.innerHTML = `${icon.heart(L, 18)}<span>끌려요</span>`;
     pass.setAttribute("aria-pressed", P);
     pass.innerHTML = `${icon.cross(14)}<span>패스</span>`;
   };
   paint();
+  // 처음 한 번: 끌려요 버튼이 어디 있는지, 누르면 어디에 모이는지 알려 준다
+  if (!state.likeHintSeen) {
+    like.classList.add("hint");
+    like.insertAdjacentHTML("beforeend", `<span class="like-tip" role="status">마음에 들면 끌려요<br><small>끌린 술은 내 기록에 모여요</small></span>`);
+    state.likeHintSeen = true;
+    save();
+  }
   let changed = false;
   const close = () => {
     document.removeEventListener("keydown", onKey);
@@ -1019,7 +1076,20 @@ function reels() {
           setTimeout(() => reel.classList.remove("moving"), 720);
           state.hintSeen = true;
           save();
+          setTimeout(() => likeHint(reel), 900);
         }, 640);
+      };
+      // 3단계: 오른쪽 하트가 끌려요라는 것, 끌린 술은 내 기록에 모인다는 것
+      const likeHint = (reel) => {
+        if (state.likeHintSeen || !reel?.isConnected) return;
+        state.likeHintSeen = true;
+        save();
+        const btn = reel.querySelector("[data-like]");
+        btn.classList.add("hint");
+        btn.insertAdjacentHTML("beforeend", `<span class="like-tip side" role="status">마음에 들면 끌려요<br><small>끌린 술은 내 기록에 모여요</small></span>`);
+        const off = () => { btn.classList.remove("hint"); btn.querySelector(".like-tip")?.remove(); };
+        setTimeout(off, 5000);
+        pager.addEventListener("scroll", off, { once: true, passive: true });
       };
       if (!state.swipeSeen) {
         const coach = document.createElement("div");
@@ -1194,7 +1264,7 @@ const levelOf = (name) => LEVELS.find((l) => l.name === name) || LEVELS[0];
 // 등급은 고르는 게 아니라 한모금을 쓴 만큼 오른다. 이용 횟수 = 바 예약 + 맛본 후기.
 // 처음 쓰는 사용자는 0번이라 술알못에서 시작한다.
 const LEVEL_AT = [0, 1, 3, 6, 10, 20]; // LEVELS 순서대로, 그 단계가 되는 이용 횟수
-const useCount = () => (state.reservations || []).length + state.reviews.length;
+const useCount = () => (state.reservations || []).length + state.reviews.length + (state.tastings || []).length;
 const levelIndexFor = (n) => LEVEL_AT.reduce((k, at, i) => (n >= at ? i : k), 0);
 const myLevel = () => LEVELS[levelIndexFor(useCount())].name;
 const NICKS = ["말랑한 복숭아", "느긋한 하이볼", "수줍은 막걸리", "반짝이는 스파클링", "포근한 매실주", "산뜻한 레몬"];
@@ -1633,7 +1703,14 @@ function tasting({ parts, q }) {
       const host = el.querySelector("[data-body]");
       const scroller = el.querySelector(".scroll");
       const level = (f) => `${13.1 - (13.1 - 3) * f}px`;
+      const logged = new Set(); // 이 화면에서 이미 기록한 메뉴 (이전·다음을 오가도 한 번만)
       const draw = (dir = 0) => {
+        if (step === 3 && !logged.has(m.id)) {
+          logged.add(m.id);
+          (state.tastings ||= []).unshift({ menuId: m.id, barId: b.id, drinkId: m.drinkId, ml: m.ml, price: m.price, date: new Date().toISOString() });
+          save();
+          toast("맛본 잔을 내 기록에 남겼어요");
+        }
         host.innerHTML = `${progress()}${header()}<div class="${dir > 0 ? "step-in-f" : dir < 0 ? "step-in-b" : ""} stack gap16">
           <div class="stack gap4"><h2 class="t-tl">${STEPS[step - 1].title}</h2><p class="t-bm c-v">${STEPS[step - 1].sub}</p></div>${body()}</div>`;
         el.querySelector("[data-foot]").innerHTML = foot();
@@ -1739,7 +1816,7 @@ function log() {
           <div><p class="t-hl" style="font-size:22px;line-height:30px">나는 <span style="color:${lv.color}">${lv.name}</span>${(lv.name.charCodeAt(lv.name.length - 1) - 0xac00) % 28 ? "이에요" : "예요"}!</p>
           <p class="t-bs c-v">${(() => { const n = useCount(), k = levelIndexFor(n); return k < LEVELS.length - 1 ? `한모금 이용 ${n}번 · ${LEVELS[k + 1].name}까지 ${LEVEL_AT[k + 1] - n}번 남았어요` : `한모금 이용 ${n}번 · 가장 높은 단계예요`; })()}</p></div></div>
         <div class="lv-ladder">${LEVELS.map((l, i) => `<span class="${l.name === lv.name ? "on" : ""}" style="--c:${l.color};--b:${l.bg}"><b>${l.name}</b><i>${LEVEL_AT[i]}번~</i></span>`).join("")}</div>
-        <p class="t-bs c-v" style="margin-top:-12px">가상 예약하거나 맛본 후기를 남길 때마다 이용 횟수가 올라가요.</p>`; })()}
+        <p class="t-bs c-v" style="margin-top:-12px">가상 예약, 맛보기 체험, 후기를 남길 때마다 이용 횟수가 올라가요.</p>`; })()}
         <div class="card stack gap12">
           <p class="t-ll c-p">지금 내 취향</p>
           <h2 class="t-hl" style="font-size:26px;line-height:34px">${esc(typeName())}</h2>
@@ -1758,6 +1835,14 @@ function log() {
           ${liked.length ? liked.map((d) => mini(d, `“${d.oneLine}”`)).join("") : `<p class="t-bm c-v">피드에서 끌려요를 누르면 여기 모여요.</p>`}</div>
         <div><h2 class="t-tm" style="margin-bottom:8px">가상 예약한 곳 ${rsv.length}</h2>
           ${rsv.length ? rsv.map((r) => mini(drinkById[r.drinkId], `${barById[r.barId].name} · ${r.ml}mL`, `#/bar/${r.barId}?drink=${r.drinkId}&menu=${encodeURIComponent(r.menuId || `${r.barId}_${r.drinkId}_${r.ml}`)}`)).join("") : `<p class="t-bm c-v">바 정보에서 가상 예약하기를 누르면 여기 모여요.</p>`}</div>
+        ${(() => {
+          const ts = (state.tastings || []).filter((t) => drinkById[t.drinkId] && barById[t.barId]);
+          const md = (iso) => { const x = new Date(iso); return `${x.getMonth() + 1}월 ${x.getDate()}일`; };
+          const wrote = (t) => state.reviews.some((r) => r.drinkId === t.drinkId && r.barId === t.barId);
+          return `<div><h2 class="t-tm" style="margin-bottom:8px">맛본 잔 ${ts.length}</h2>
+          ${ts.length ? ts.map((t) => mini(drinkById[t.drinkId], `${md(t.date)} · ${barById[t.barId].name} · ${t.ml}mL${wrote(t) ? " · 후기 남김" : " · 눌러서 후기 남기기"}`, `#/review/${t.drinkId}?bar=${t.barId}&ml=${t.ml}`)).join("")
+            : `<p class="t-bm c-v">바 정보에서 맛보기 체험을 끝까지 하면 여기 남아요.</p>`}</div>`;
+        })()}
         <div><h2 class="t-tm" style="margin-bottom:8px">직접 맛본 후기 ${state.reviews.length}</h2>
           ${state.reviews.length ? state.reviews.map((r) => mini(drinkById[r.drinkId], `${r.reaction}${r.barId ? ` · ${barById[r.barId].name}` : ""}${r.text ? ` · ${r.text}` : ""}`)).join("") : `<p class="t-bm c-v">맛보기 체험을 마치고 후기를 남기면 여기 쌓여요.</p>`}</div>
         <p class="center"><button class="btn-t v" data-reset>처음부터 다시 하기</button></p>
