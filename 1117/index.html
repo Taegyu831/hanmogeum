@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#FFF9F5">
+<title>한모금 (11/17 버전)</title>
+<meta name="description" content="소주 맥주 너머, 내 입맛의 첫 한 모금. SSU HCI 10조 프로토타입.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+<div class="stage">
+  <main id="app" class="phone" aria-live="polite"></main>
+  <aside class="stage-note">
+    <p class="stage-title">한모금</p>
+    <p>SSU HCI 10조 프로토타입입니다. 휴대폰으로 열면 전체 화면으로 볼 수 있어요.</p>
+    <p>술, 바, 가격, 후기는 모두 평가용 예시 데이터예요.</p>
+  </aside>
+</div>
+<script>
+// GitHub Pages는 이 파일을 10분간 캐시한다. 그래서 최신 버전 번호를 캐시 없이 먼저 확인하고
+// 그 번호로 스타일과 앱을 불러온다. 다시 불러오기(새로고침) 없이 항상 최신 화면이 열린다.
+(function () {
+  var FALLBACK = "11171442";
+  function load(v) {
+    var l = document.createElement("link");
+    l.rel = "stylesheet"; l.href = "css/style.css?v=" + v;
+    l.onload = l.onerror = function () {
+      var s = document.createElement("script");
+      s.type = "module"; s.src = "js/app.js?v=" + v;
+      document.body.appendChild(s);
+    };
+    document.head.appendChild(l);
+  }
+  fetch("version.json?t=" + Date.now(), { cache: "no-store" })
+    .then(function (r) { return r.json(); })
+    .then(function (j) { load(j.v || FALLBACK); }, function () { load(FALLBACK); });
+})();
+</script>
+</body>
+</html>

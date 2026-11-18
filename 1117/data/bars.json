@@ -1,0 +1,227 @@
+[
+ {
+  "id": "B1",
+  "name": "바 오늘의잔",
+  "area": "마포구 상수동",
+  "distance": "도보 5분",
+  "hours": "18:00~02:00",
+  "pours": [
+   {
+    "drinkId": "W1",
+    "ml": 10,
+    "price": 1500,
+    "openedDays": 2,
+    "lastToday": false
+   },
+   {
+    "drinkId": "W1",
+    "ml": 30,
+    "price": 3000,
+    "openedDays": 2,
+    "lastToday": false
+   },
+   {
+    "drinkId": "W2",
+    "ml": 20,
+    "price": 2000,
+    "openedDays": 4,
+    "lastToday": true
+   },
+   {
+    "drinkId": "W4",
+    "ml": 30,
+    "price": 3000,
+    "openedDays": 1,
+    "lastToday": false
+   },
+   {
+    "drinkId": "K1",
+    "ml": 30,
+    "price": 3500,
+    "openedDays": 1,
+    "lastToday": false
+   },
+   {
+    "drinkId": "H1",
+    "ml": 15,
+    "price": 5000,
+    "openedDays": 6,
+    "lastToday": false
+   },
+   {
+    "drinkId": "H10",
+    "ml": 30,
+    "price": 2500,
+    "openedDays": 1,
+    "lastToday": false
+   }
+  ]
+ },
+ {
+  "id": "B2",
+  "name": "와인바 라운드",
+  "area": "마포구 합정동",
+  "distance": "도보 9분",
+  "hours": "17:00~01:00",
+  "pours": [
+   {
+    "drinkId": "W1",
+    "ml": 20,
+    "price": 2500,
+    "openedDays": 1,
+    "lastToday": false
+   },
+   {
+    "drinkId": "W3",
+    "ml": 20,
+    "price": 2500,
+    "openedDays": 3,
+    "lastToday": false
+   },
+   {
+    "drinkId": "W5",
+    "ml": 20,
+    "price": 3500,
+    "openedDays": 2,
+    "lastToday": false
+   },
+   {
+    "drinkId": "W6",
+    "ml": 20,
+    "price": 3500,
+    "openedDays": 5,
+    "lastToday": true
+   },
+   {
+    "drinkId": "H7",
+    "ml": 30,
+    "price": 3500,
+    "openedDays": 2,
+    "lastToday": false
+   }
+  ]
+ },
+ {
+  "id": "B3",
+  "name": "주담 연남",
+  "area": "마포구 연남동",
+  "distance": "도보 12분",
+  "hours": "18:00~24:00",
+  "pours": [
+   {
+    "drinkId": "K1",
+    "ml": 30,
+    "price": 3500,
+    "openedDays": 3,
+    "lastToday": false
+   },
+   {
+    "drinkId": "K2",
+    "ml": 100,
+    "price": 2500,
+    "openedDays": 1,
+    "lastToday": false
+   },
+   {
+    "drinkId": "K3",
+    "ml": 30,
+    "price": 2500,
+    "openedDays": 2,
+    "lastToday": false
+   },
+   {
+    "drinkId": "K4",
+    "ml": 15,
+    "price": 3000,
+    "openedDays": 10,
+    "lastToday": false
+   },
+   {
+    "drinkId": "K5",
+    "ml": 30,
+    "price": 3000,
+    "openedDays": 4,
+    "lastToday": false
+   },
+   {
+    "drinkId": "K6",
+    "ml": 15,
+    "price": 3000,
+    "openedDays": 6,
+    "lastToday": false
+   },
+   {
+    "drinkId": "K7",
+    "ml": 30,
+    "price": 3000,
+    "openedDays": 2,
+    "lastToday": false
+   }
+  ]
+ },
+ {
+  "id": "B4",
+  "name": "다락 위스키바",
+  "area": "마포구 서교동",
+  "distance": "도보 8분",
+  "hours": "19:00~03:00",
+  "pours": [
+   {
+    "drinkId": "H1",
+    "ml": 15,
+    "price": 5500,
+    "openedDays": 7,
+    "lastToday": false
+   },
+   {
+    "drinkId": "H2",
+    "ml": 15,
+    "price": 6500,
+    "openedDays": 9,
+    "lastToday": true
+   },
+   {
+    "drinkId": "H3",
+    "ml": 15,
+    "price": 4500,
+    "openedDays": 5,
+    "lastToday": false
+   },
+   {
+    "drinkId": "H4",
+    "ml": 30,
+    "price": 3000,
+    "openedDays": 0,
+    "lastToday": false
+   },
+   {
+    "drinkId": "H5",
+    "ml": 30,
+    "price": 4000,
+    "openedDays": 4,
+    "lastToday": false
+   },
+   {
+    "drinkId": "H6",
+    "ml": 15,
+    "price": 4500,
+    "openedDays": 8,
+    "lastToday": false
+   },
+   {
+    "drinkId": "H8",
+    "ml": 15,
+    "price": 6000,
+    "openedDays": 7,
+    "lastToday": false
+   },
+   {
+    "drinkId": "H9",
+    "ml": 15,
+    "price": 4500,
+    "openedDays": 6,
+    "lastToday": false
+   }
+  ]
+ }
+]
